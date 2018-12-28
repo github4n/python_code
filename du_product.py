@@ -15,6 +15,7 @@ headers = {
 PRODUCT_Q = queue.Queue(5000)
 
 
+
 # 获取签名p
 def getSign(api_params):
     hash_map = {
