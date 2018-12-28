@@ -2,7 +2,7 @@ import common.conf as conf
 import common.function as common
 import pymysql, aiohttp, asyncio, hashlib, queue, time, sys, arrow, logging
 
-log_name = "du_prodct_log.log"
+log_name = "log/du_prodct_log.log"
 # header 头
 headers = {
     "duuuid": "309c23acc4953851",
