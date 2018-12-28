@@ -10,7 +10,7 @@ def console_out(file_name, type, msg):
         format='%(asctime)s  %(filename)s : %(levelname)s  %(message)s',  # 定义输出log的格式
         datefmt='%Y-%m-%d %A %H:%M:%S',  # 时间
         filename=file_name,  # log文件名
-        filemode='a',
+        filemode='w',
     )  # 写入模式“w”或“a”
     # Define a Handler and set a format which output to console
     console = logging.StreamHandler()  # 定义console handler
