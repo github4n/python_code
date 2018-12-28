@@ -1,3 +1,4 @@
+import conf
 import pymysql, aiohttp, asyncio, hashlib, queue, time, sys, arrow
 
 # header 头
@@ -121,8 +122,9 @@ async def sqlHandle(product_info):
     table_name = "product"
     table_name2 = "product_sold"
     # 打开数据库连接
-    db = pymysql.connect(host='127.0.0.1', port=3306,
-                         user='root', passwd='root', db='du', charset='utf8')
+    db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
+                         user=conf.database['user'], passwd=conf.database['passwd'], db=conf.database['db'],
+                         charset=conf.database['charset'])
 
     # 使用cursor()方法获取操作游标
     cursor = db.cursor()
