@@ -1,6 +1,8 @@
-import conf
-import pymysql, aiohttp, asyncio, hashlib, queue, time, sys, arrow
+import common.conf as conf
+import common.function as common
+import pymysql, aiohttp, asyncio, hashlib, queue, time, sys, arrow, logging
 
+log_name = "du_prodct_log.log"
 # header 头
 headers = {
     "duuuid": "309c23acc4953851",
@@ -64,11 +66,11 @@ async def getData(url):
                 ret_json = await resp.json()
                 return ret_json
             except:
-                print("[爬取错误]")
+                common.console_out(log_name, 'error', "[爬取错误]")
 
 
 async def spiderList(page):
-    print("[爬取列表] 第", page, ' 页')
+    common.console_out(log_name, 'info', "[爬取列表] 第" + str(page) + ' 页')
     url = getApiUrl('/search/list', {
         "size": "[]",
         "title": "",
@@ -83,7 +85,7 @@ async def spiderList(page):
     data = await getData(url)
     productList = data['data']['productList']
     if not productList:
-        print("[退出脚本] 没有产品了")
+        common.console_out(log_name, 'info', "[退出脚本] 没有产品了")
         sys.exit()
 
     for v in productList:
@@ -92,7 +94,7 @@ async def spiderList(page):
             'isChest': str(0),
         })
         product_detail = await getData(url)
-        print("[爬取详情] product:", v['productId'])
+        common.console_out(log_name, 'info', "[爬取详情] product:" + str(v['productId']))
 
         PRODUCT_Q.put(product_detail)
         if not PRODUCT_Q.empty():
@@ -161,17 +163,19 @@ async def sqlHandle(product_info):
         sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
                                                   "VALUES (%s,%s,%s,%s,%s)"
         try:
-            print("[修改商品]  商品：", product_info[4])
+            common.console_out(log_name, 'info', "[修改商品]  商品：" + str(product_info[4]))
             # 执行sql语句
             cursor.execute(sql_edit, product_info)
             # 判断商品是否为2018年以后 只记录2018年新款
             if product_info[6][0:4] == '2018':
-                print("[记录商品]  商品：", product_info[4])
+                common.console_out(log_name, 'info', "[记录商品]  商品：" + str(product_info[4]))
+
                 cursor.execute(sql_sold, sold_data)
             # 提交到数据库执行
             db.commit()
         except:
-            print("[修改商品] Error!")
+            common.console_out(log_name, 'error', "[修改商品] " + product_info[4] + " Error!")
+
             # 如果发生错误则回滚
             db.rollback()
             # 关闭游标
@@ -187,13 +191,13 @@ async def sqlHandle(product_info):
     T = product_info
 
     try:
-        print("[添加商品] 商品：", product_info[5])
+        common.console_out(log_name, 'error', "[添加商品] 商品：" + str(product_info[5]))
         # 执行sql语句
         cursor.execute(sql, T)
         # 提交到数据库执行
         db.commit()
     except:
-        print("[添加商品] Error!")
+        common.console_out(log_name, 'error', "[添加商品] 商品：" + str(product_info[5]) + " Error!")
         # 如果发生错误则回滚
         db.rollback()
         # 关闭游标
