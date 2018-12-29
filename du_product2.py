@@ -121,16 +121,17 @@ async def spiderDetail(pool, product):
             'spiderTime': int(time.time()),
         }
         # 等待插入
-        await spiderInsert(pool, info_arr)
+        await spiderInsert(pool, info_arr, info['sizeList'])
     except:
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
 # 插入操作
-async def spiderInsert(pool, info_arr):
+async def spiderInsert(pool, info_arr, sizeList):
     try:
         table_name = "product"
         table_name2 = "product_sold"
+        table_name3 = "product_size"
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # SQL 查询语句 判断是否存在
@@ -155,15 +156,6 @@ async def spiderInsert(pool, info_arr):
                                "updateTime=%s, " + \
                                "articleNumber=%s " + \
                                "WHERE productId=%s"
-
-                    # SQL 记录商品销售数量  记录发售日期
-                    rep_time = info_arr['sellDate'].replace('.', '-')
-                    time_str = arrow.get(rep_time).timestamp
-
-                    sold_add = info_arr['soldNum'] - row[1]
-                    sold_data = [info_arr['productId'], info_arr['soldNum'], sold_add, info_arr['spiderTime'], time_str]
-                    sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
-                                                              "VALUES (%s,%s,%s,%s,%s)"
                     try:
                         edit_arr = [
                             info_arr['authPrice'],
@@ -185,13 +177,32 @@ async def spiderInsert(pool, info_arr):
                         logging.info("[修改商品]  商品：" + str(info_arr['title']))
                         # 修改商品
                         await cur.execute(sql_edit, edit_arr)
-                        # 判断商品是否为2018年以后 只记录2018年新款
-                        if str(info_arr['sellDate'][0:4]) == '2018':
-                            logging.info("[记录商品]  商品：" + str(info_arr['title']))
-                            await cur.execute(sql_sold, sold_data)
-
                     except Exception as e:
                         logging.error("[修改商品] " + info_arr[4] + " error：" + traceback.format_exc())
+
+                    # 单独记录2018年的新款商品
+                    if str(info_arr['sellDate'][0:4]) == '2018':
+                        rep_time = info_arr['sellDate'].replace('.', '-')
+                        time_str = arrow.get(rep_time).timestamp
+                        sold_add = info_arr['soldNum'] - row[1]
+                        sold_data = [info_arr['productId'], info_arr['soldNum'], sold_add, info_arr['spiderTime'],
+                                     time_str]
+                        sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
+                                                                  "VALUES (%s,%s,%s,%s,%s)"
+                        logging.info("[记录商品]  商品：" + str(info_arr['title']))
+                        await cur.execute(sql_sold, sold_data)
+
+                        # 记录sizelist
+                        for v in sizeList:
+                            if 'price' in v['item']:
+                                size_keys = ['productId', 'size', 'formatSize', 'price', 'spiderTime']
+                                size_keys = ",".join(size_keys)
+
+                                size_data = [info_arr['productId'], v['size'], v['formatSize'], v['item']['price'], info_arr['spiderTime']]
+                                sql_size = "INSERT INTO " + table_name3 + "("+size_keys+") " \
+                                                                          "VALUES (%s,%s,%s,%s,%s)"
+                                await cur.execute(sql_size, size_data)
+                                logging.info('[添加尺码]')
 
                     return
                 else:
@@ -206,6 +217,8 @@ async def spiderInsert(pool, info_arr):
                         await cur.execute(sql, add_vals)
                     except Exception as e:
                         logging.error("[添加商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
+
+
 
     except Exception as e:
         logging.error("[处理商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
