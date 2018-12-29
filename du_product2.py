@@ -217,7 +217,7 @@ async def main(loop):
                                       user=conf.database['user'], password=conf.database['passwd'],
                                       db=conf.database['db'], loop=loop)
 
-    for page in range(300, 600):
+    for page in range(400):
         asyncio.ensure_future(spiderList(loop, pool, page))
         await asyncio.sleep(0.2)
 
