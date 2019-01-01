@@ -6,6 +6,10 @@ log_name = "log/du_product_log2.log"
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
+table_name = "product"
+table_name2 = "product_sold"
+table_name3 = "product_size"
+
 
 # 获取签名p
 def getSign(api_params):
@@ -126,12 +130,25 @@ async def spiderDetail(pool, product):
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
+# 添加尺码
+async def insertSize(pool, size_info, product_info):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            size_keys = ['productId', 'size', 'formatSize', 'price', 'spiderTime']
+            size_keys = ",".join(size_keys)
+
+            size_data = [product_info['productId'], size_info['size'], size_info['formatSize'],
+                         size_info['item']['price'], product_info['spiderTime']]
+            sql_size = "INSERT INTO " + table_name3 + "(" + size_keys + ") " \
+                                                                        "VALUES (%s,%s,%s,%s,%s)"
+            await cur.execute(sql_size, size_data)
+            logging.info('[添加尺码]' + str(size_info['size']))
+
+
 # 插入操作
 async def spiderInsert(pool, info_arr, sizeList):
     try:
-        table_name = "product"
-        table_name2 = "product_sold"
-        table_name3 = "product_size"
+
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # SQL 查询语句 判断是否存在
@@ -195,14 +212,7 @@ async def spiderInsert(pool, info_arr, sizeList):
                         # 记录sizelist
                         for v in sizeList:
                             if 'price' in v['item']:
-                                size_keys = ['productId', 'size', 'formatSize', 'price', 'spiderTime']
-                                size_keys = ",".join(size_keys)
-
-                                size_data = [info_arr['productId'], v['size'], v['formatSize'], v['item']['price'], info_arr['spiderTime']]
-                                sql_size = "INSERT INTO " + table_name3 + "("+size_keys+") " \
-                                                                          "VALUES (%s,%s,%s,%s,%s)"
-                                await cur.execute(sql_size, size_data)
-                                logging.info('[添加尺码]')
+                                asyncio.ensure_future(insertSize(pool, v, info_arr))
 
                     return
                 else:
