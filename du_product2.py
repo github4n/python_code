@@ -10,6 +10,8 @@ table_name = "product"
 table_name2 = "product_sold"
 table_name3 = "product_size"
 
+now_time = arrow.now().timestamp
+
 
 # 获取签名p
 def getSign(api_params):
@@ -158,7 +160,7 @@ async def insertSize(pool, size_info, product_info):
                             price_arr.pop(index=0)
 
                         sql_edit = "UPDATE " + table_name3 + " SET price=%s,updateTime=%s where productId = %s and size = %s"
-                        sql_data = [json.dumps(price_arr), arrow.now().timestamp, product_info['productId'],
+                        sql_data = [json.dumps(price_arr), now_time, product_info['productId'],
                                     size_info['size']]
                         await cur.execute(sql_edit, sql_data)
 
@@ -255,7 +257,7 @@ async def spiderInsert(pool, info_arr, sizeList):
 
                     return
 
-    except Exception as e:
+    except :
         traceback.print_exc()
         logging.error("[处理商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
 
