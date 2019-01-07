@@ -232,24 +232,25 @@ async def spiderInsert(pool, info_arr, sizeList):
                     # 执行sql语句
                     await cur.execute(sql, add_vals)
 
-                # 单独记录2018年的新款商品
-                if str(info_arr['sellDate'][0:4]) == '2018':
-                    rep_time = info_arr['sellDate'].replace('.', '-')
-                    time_str = arrow.get(rep_time).timestamp
-                    sold_add = info_arr['soldNum'] - row[1]
-                    sold_data = [info_arr['productId'], info_arr['soldNum'], sold_add, info_arr['spiderTime'],
-                                 time_str]
-                    sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
-                                                              "VALUES (%s,%s,%s,%s,%s)"
-                    logging.info("[记录商品]  商品：" + str(info_arr['title']))
-                    await cur.execute(sql_sold, sold_data)
+                if row:
+                    # 单独记录2018年的新款商品
+                    if str(info_arr['sellDate'][0:4]) == '2018':
+                        rep_time = info_arr['sellDate'].replace('.', '-')
+                        time_str = arrow.get(rep_time).timestamp
+                        sold_add = info_arr['soldNum'] - row[1]
+                        sold_data = [info_arr['productId'], info_arr['soldNum'], sold_add, info_arr['spiderTime'],
+                                     time_str]
+                        sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
+                                                                  "VALUES (%s,%s,%s,%s,%s)"
+                        logging.info("[记录商品]  商品：" + str(info_arr['title']))
+                        await cur.execute(sql_sold, sold_data)
 
-                    # 记录sizelist
-                    for v in sizeList:
-                        if 'price' in v['item'] and v['item']['price'] != 0:
-                            asyncio.ensure_future(insertSize(pool, v, info_arr))
+                        # 记录sizelist
+                        for v in sizeList:
+                            if 'price' in v['item'] and v['item']['price'] != 0:
+                                asyncio.ensure_future(insertSize(pool, v, info_arr))
 
-                return
+                    return
 
     except Exception as e:
         traceback.print_exc()
