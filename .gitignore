@@ -21,3 +21,4 @@ api_test.py
 common/__pycache__/conf.cpython-37.pyc
 common/__pycache__/
 *.log
+test_arrow.py
