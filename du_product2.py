@@ -138,30 +138,33 @@ async def insertSize(pool, size_info, product_info):
                 size_keys = ['productId', 'size', 'formatSize', 'price', 'spiderTime', 'updateTime']
                 size_keys = ",".join(size_keys)
                 # 判断尺码是否存在  并且是今天还没爬取过 储存为json方式
-                # 获取今天凌晨的时间  0：00
-                today_time = arrow.now().floor('day').timestamp
+
                 # SQL 查询语句 判断是否存在
-                sql_where = "SELECT price FROM " + table_name3 + " WHERE productId = %s and size = %s and updateTime < %s"
-                sql_data = [product_info['productId'], size_info['size'], today_time]
+                sql_where = "SELECT price,updateTime FROM " + table_name3 + " WHERE productId = %s and size = %s"
+                sql_data = [product_info['productId'], size_info['size']]
                 await cur.execute(sql_where, sql_data)
                 row = await cur.fetchone()
 
                 if row:
-                    price_arr = json.loads(row[0])
-                    price_arr.append(size_info['item']['price'])
+                    # 获取今天凌晨的时间  0：00
+                    today_time = arrow.now().floor('day').timestamp
+                    # 只有更新时间小于今天凌晨的才修改
+                    if row[1] < today_time:
+                        price_arr = json.loads(row[0])
+                        price_arr.append(size_info['item']['price'])
 
-                    # 只保存60天的记录
-                    while len(price_arr) > 60:
-                        price_arr.pop(index=0)
+                        # 只保存60天的记录
+                        while len(price_arr) > 60:
+                            price_arr.pop(index=0)
 
-                    sql_edit = "UPDATE " + table_name3 + " SET price=%s,updateTime=%s where productId = %s and size = %s"
-                    sql_data = [json.dumps(price_arr), arrow.now().timestamp, product_info['productId'],
-                                size_info['size']]
-                    await cur.execute(sql_edit, sql_data)
+                        sql_edit = "UPDATE " + table_name3 + " SET price=%s,updateTime=%s where productId = %s and size = %s"
+                        sql_data = [json.dumps(price_arr), arrow.now().timestamp, product_info['productId'],
+                                    size_info['size']]
+                        await cur.execute(sql_edit, sql_data)
 
-                    logging.info('[修改尺码]' + str(product_info['productId']) + ":" + str(size_info['size']))
-                    logging.info("[修改尺码SQL] SELECT price FROM " + table_name3 + " WHERE productId = " + str(
-                        product_info['productId']) + " and size = " + str(size_info['size']))
+                        logging.info('[修改尺码]' + str(product_info['productId']) + ":" + str(size_info['size']))
+                        logging.info("[修改尺码SQL] SELECT price FROM " + table_name3 + " WHERE productId = " + str(
+                            product_info['productId']) + " and size = " + str(size_info['size']))
                 else:
                     sql_size = "INSERT INTO " + table_name3 + "(" + size_keys + ") " \
                                                                                 "VALUES (%s,%s,%s,%s,%s,%s)"
