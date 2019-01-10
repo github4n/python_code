@@ -61,6 +61,7 @@ async def spiderDetail(pool, urlKey):
                     'year': size_list[v]['year'],
                     'imageUrl': size_list[v]['media']['imageUrl'],
                     'spiderTime': now_time,
+                    'updateTime': now_time,
                 }
                 if 'lowestAsk' in size_list[v]['market']:
                     info_arr['lowestAsk'] = size_list[v]['market']['lowestAsk']
