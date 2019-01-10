@@ -1,219 +1,145 @@
 import common.conf as conf
-import common.function as common
-import pymysql, aiohttp, asyncio, hashlib, queue, time, sys, arrow, logging
+import aiohttp, asyncio, arrow, logging, aiomysql, traceback, time
 
 log_name = "log/du_product_log.log"
-# header 头
-headers = {
-    "duuuid": "309c23acc4953851",
-    "duplatform": "android",
-    "duv": "3.5.1",
-    "duloginToken": "51cf4799|30509751|440810d5560dabcb",
-    "Cookie": "duToken=61c71f31%7C30509751%7C1545622207%7Cfcb023622aa7d8ee",
-}
-# 储存product的队列
-PRODUCT_Q = queue.Queue(5000)
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
+table_name = "stockx_product_size"
+table_name2 = "product_sold"
+table_name3 = "product_size"
 
-# 获取签名p
-def getSign(api_params):
-    hash_map = {
-        "uuid": headers["duuuid"],
-        "platform": headers["duplatform"],
-        "v": headers["duv"],
-        "loginToken": headers["duloginToken"],
-    }
-
-    for k in api_params:
-        hash_map[k] = api_params[k]
-
-    hash_map = sorted(hash_map.items(), key=lambda x: x[0])
-
-    str = ''
-    for v in hash_map:
-        str += v[0] + v[1]
-
-    str += "3542e676b4c80983f6131cdfe577ac9b"
-
-    # 生成一个md5对象
-    m1 = hashlib.md5()
-    # 使用md5对象里的update方法md5转换
-    m1.update(str.encode("GBK"))
-    sign = m1.hexdigest()
-    return sign
-
-
-def getApiUrl(api_url, api_params):
-    url = "https://m.poizon.com"
-    # 拼接域名
-    url += api_url
-
-    # 拼接参数
-    url += '?'
-    for k in api_params:
-        url += k + '=' + api_params[k] + '&'
-    # 获取sign
-    sign = getSign(api_params)
-    url += 'sign=' + sign
-
-    return url
+now_time = arrow.now().timestamp
 
 
 async def getData(url):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as resp:
+    i = 1
+    while True:
+        if i <= 3:
             try:
-                ret_json = await resp.json()
-                return ret_json
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=conf.headers, timeout=60) as resp:
+                            if resp.status != 200:
+                                print(resp.status)
+                            ret_json = await resp.json()
+                            return ret_json
             except:
-                common.console_out(log_name, 'error', "[爬取错误]")
+                print(i)
+                i += 1
+                traceback.print_exc()
+                logging.error("[爬取错误]" + traceback.format_exc())
 
 
-async def spiderList(page):
-    common.console_out(log_name, 'info', "[爬取列表] 第" + str(page) + ' 页')
-    url = getApiUrl('/search/list', {
-        "size": "[]",
-        "title": "",
-        "typeId": "0",
-        "catId": "0",
-        "unionId": "0",
-        "sortType": "0",
-        "sortMode": "1",
-        "page": str(page),
-        "limit": "20",
-    })
-    data = await getData(url)
-    productList = data['data']['productList']
-    if not productList:
-        common.console_out(log_name, 'info', "[退出脚本] 没有产品了")
-        sys.exit()
-
-    for v in productList:
-        url = getApiUrl('/product/detail', {
-            'productId': str(v['productId']),
-            'isChest': str(0),
-        })
-        product_detail = await getData(url)
-        common.console_out(log_name, 'info', "[爬取详情] product:" + str(v['productId']))
-
-        PRODUCT_Q.put(product_detail)
-        if not PRODUCT_Q.empty():
-            info = PRODUCT_Q.get()
-            info = info['data']
-            info_arr = [
-                info['detail']['productId'],
-                str(info['detail']['authPrice']),
-                info['detail']['brandId'],
-                info['detail']['typeId'],
-                pymysql.escape_string(info['detail']['logoUrl']),
-                pymysql.escape_string(info['detail']['title']),
-                info['detail']['soldNum'],
-                info['detail']['sellDate'],
-                pymysql.escape_string(info['detail']['color']),
-                info['detail']['productId'],
-                pymysql.escape_string(info['rapidlyExpressTips']),
-                pymysql.escape_string(info['exchangeDesc']),
-                pymysql.escape_string(info['dispatchName']),
-                int(time.time()),
-                info['detail']['articleNumber'],
-            ]
-            await sqlHandle(info_arr)
-
-
-async def sqlHandle(product_info):
-    table_name = "product"
-    table_name2 = "product_sold"
-    # 打开数据库连接
-    db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
-                         user=conf.database['user'], passwd=conf.database['passwd'], db=conf.database['db'],
-                         charset=conf.database['charset'])
-
-    # 使用cursor()方法获取操作游标
-    cursor = db.cursor()
-    # SQL 查询语句 判断是否存在
-    sql_where = "SELECT productId,soldNum FROM " + table_name + " WHERE productId = " + str(product_info[0])
-    cursor.execute(sql_where)
-    row = cursor.fetchone()
-    if row:
-        temp = product_info.pop(0)
-        product_info.append(temp)
-        # SQL 修改语句
-        sql_edit = "UPDATE " + table_name + " SET authPrice=%s," + \
-                   "brandId=%s," + \
-                   "typeId=%s," + \
-                   "logoUrl=%s," + \
-                   "title=%s," + \
-                   "soldNum=%s," + \
-                   "sellDate=%s," + \
-                   "color=%s," + \
-                   "sizeList=%s," + \
-                   "rapidlyExpressTips=%s," + \
-                   "exchangeDesc=%s," + \
-                   "dispatchName=%s," + \
-                   "updateTime=%s, " + \
-                   "articleNumber=%s " + \
-                   "WHERE productId=%s"
-
-        # SQL 记录商品销售数量  记录发售日期
-        sold_add = product_info[5] - row[1]
-        rep_time = product_info[6].replace('.', '-')
-        time_str = arrow.get(rep_time).timestamp
-
-        sold_data = [product_info[-1], product_info[5], sold_add, product_info[-3], time_str]
-        sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
-                                                  "VALUES (%s,%s,%s,%s,%s)"
-        try:
-            common.console_out(log_name, 'info', "[修改商品]  商品：" + str(product_info[4]))
-            # 执行sql语句
-            cursor.execute(sql_edit, product_info)
-            # 判断商品是否为2018年以后 只记录2018年新款
-            if product_info[6][0:4] == '2018':
-                common.console_out(log_name, 'info', "[记录商品]  商品：" + str(product_info[4]))
-
-                cursor.execute(sql_sold, sold_data)
-            # 提交到数据库执行
-            db.commit()
-        except:
-            common.console_out(log_name, 'error', "[修改商品] " + product_info[4] + " Error!")
-
-            # 如果发生错误则回滚
-            db.rollback()
-            # 关闭游标
-            cursor.close()
-            # 关闭数据库连接
-            db.close()
-
-        return
-
-    # SQL 插入语句
-    sql = "INSERT INTO " + table_name + "(productId,authPrice,brandId,typeId,logoUrl,title,soldNum,sellDate,color,sizeList,rapidlyExpressTips,exchangeDesc,dispatchName,spiderTime,articleNumber) " \
-                                        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-    T = product_info
-
+async def spiderList(loop, pool, page):
     try:
-        common.console_out(log_name, 'error', "[添加商品] 商品：" + str(product_info[5]))
-        # 执行sql语句
-        cursor.execute(sql, T)
-        # 提交到数据库执行
-        db.commit()
+        # 等待返回结果
+        url = 'https://stockx.com/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=most-active&page=' + str(
+            page)
+        data = await getData(url)
+        productList = data['Products']
+
+        # 遍历商品列表获取详情
+        for v in productList:
+            asyncio.ensure_future(spiderDetail(pool, v['urlKey']))
     except:
-        common.console_out(log_name, 'error', "[添加商品] 商品：" + str(product_info[5]) + " Error!")
-        # 如果发生错误则回滚
-        db.rollback()
-        # 关闭游标
-        cursor.close()
-        # 关闭数据库连接
-        db.close()
+        traceback.print_exc()
+        logging.error("[爬取列表] error:" + traceback.format_exc())
+
+
+# 遍历商品列表获取详情
+async def spiderDetail(pool, urlKey):
+    try:
+        logging.info("[爬取详情] product:" + str(urlKey))
+
+        url = 'https://stockx.com/api/products/' + str(urlKey) + '?includes=market,360&currency=USD'
+        product_detail = await getData(url)
+
+        # 插入对象赋值
+        size_list = product_detail['Product']['children']
+        for v in size_list:
+            if 'styleId' in v:
+                info_arr = {
+                    'title': size_list[v]['title'],
+                    'styleId': size_list[v]['styleId'],
+                    'shoeSize': size_list[v]['shoeSize'],
+                    'year': size_list[v]['year'],
+                    'imageUrl': size_list[v]['media']['imageUrl'],
+                    'spiderTime': now_time,
+                }
+                if 'lowestAsk' in size_list[v]['market']:
+                    info_arr['lowestAsk'] = size_list[v]['market']['lowestAsk']
+                else:
+                    info_arr['lowestAsk'] = 0
+                if 'highestBid' in size_list[v]['market']:
+                    info_arr['highestBid'] = size_list[v]['market']['highestBid']
+                else:
+                    info_arr['highestBid'] = 0
+                # 等待插入
+                asyncio.ensure_future(spiderInsert(pool, info_arr))
+    except:
+        traceback.print_exc()
+        logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
+
+
+# 插入操作
+async def spiderInsert(pool, info_arr):
+    try:
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # SQL 查询语句 判断是否存在
+                sql_where = "SELECT * FROM " + table_name + " WHERE styleId = %s AND shoeSize = %s"
+                sql_data = [info_arr['styleId'], info_arr['shoeSize']]
+                await cur.execute(sql_where, sql_data)
+                row = await cur.fetchone()
+                if row:
+                    # SQL 修改语句
+                    sql_edit = "UPDATE " + table_name + " SET lowestAsk=%s," + \
+                               "highestBid=%s," + \
+                               "updateTime=%s " + \
+                               "WHERE styleId=%s and shoeSize=%s"
+                    edit_arr = [
+                        info_arr['lowestAsk'],
+                        info_arr['highestBid'],
+                        now_time,
+                        info_arr['styleId'],
+                        info_arr['shoeSize'],
+                    ]
+                    # 修改商品
+                    await cur.execute(sql_edit, edit_arr)
+                else:
+
+                    add_keys = ",".join(info_arr.keys())
+                    add_vals = list(info_arr.values())
+                    str = []
+                    for i in range(len(add_vals)):
+                        str.append("%s")
+                    temp_str = ",".join(str)
+                    # SQL 插入语句
+                    sql = "INSERT INTO " + table_name + "(" + add_keys + ") VALUES (" + temp_str + ")"
+                    # logging.info("[添加商品] 商品：" + str(info_arr['title']))
+                    # 执行sql语句
+                    await cur.execute(sql, add_vals)
+    except:
+        traceback.print_exc()
+        logging.error("[处理商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
+
+
+async def main(loop):
+    # 等待mysql连接好
+    pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
+                                      user=conf.database['user'], password=conf.database['passwd'],
+                                      db=conf.database['db'], loop=loop)
+    if arrow.now().hour == 13:
+        for page in range(30):
+            asyncio.ensure_future(spiderList(loop, pool, page))
+            await asyncio.sleep(1)
+    else:
+        print("还没到时间，休眠 60 秒")
+        time.sleep(60)
 
 
 if __name__ == '__main__':
-    page = 1
-    while True:
-        tasks = []
-        for i in range(50):
-            tasks.append(asyncio.ensure_future(spiderList(page)))
-            page += 1
-
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*tasks))
+    loop = asyncio.get_event_loop()
+    task = asyncio.ensure_future(main(loop))
+    loop.run_forever()

@@ -67,7 +67,7 @@ async def getData(url):
                 logging.error("[爬取错误]" + traceback.format_exc())
 
 
-async def spiderList(loop, pool, page):
+async def spiderList(pool, page):
     try:
         url = getApiUrl('/search/list', {
             "size": "[]",
