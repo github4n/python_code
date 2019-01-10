@@ -126,17 +126,19 @@ async def spiderInsert(pool, info_arr):
 
 
 async def main(loop):
-    # 等待mysql连接好
-    pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
-                                      user=conf.database['user'], password=conf.database['passwd'],
-                                      db=conf.database['db'], loop=loop)
-    if arrow.now().hour == 13:
-        for page in range(30):
-            asyncio.ensure_future(spiderList(loop, pool, page))
-            await asyncio.sleep(1)
-    else:
-        print("还没到时间，休眠 60 秒")
-        time.sleep(60)
+    while True:
+        if arrow.now().hour == 14:
+            print("开始爬虫")
+            # 等待mysql连接好
+            pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
+                                              user=conf.database['user'], password=conf.database['passwd'],
+                                              db=conf.database['db'], loop=loop)
+            for page in range(30):
+                asyncio.ensure_future(spiderList(loop, pool, page))
+                await asyncio.sleep(1)
+        else:
+            print("还没到时间，休眠 60 秒")
+            time.sleep(60)
 
 
 if __name__ == '__main__':
