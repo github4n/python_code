@@ -270,7 +270,7 @@ async def main(loop):
                                       db=conf.database['db'], loop=loop)
 
     for page in range(400):
-        asyncio.ensure_future(spiderList(loop, pool, page))
+        asyncio.ensure_future(spiderList(pool, page))
         await asyncio.sleep(2)
 
     await asyncio.sleep(7200)
