@@ -263,6 +263,7 @@ async def spiderInsert(pool, info_arr, sizeList):
 
 
 async def main(loop):
+
     # 等待mysql连接好
     pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
                                       user=conf.database['user'], password=conf.database['passwd'],
@@ -270,7 +271,9 @@ async def main(loop):
 
     for page in range(400):
         asyncio.ensure_future(spiderList(loop, pool, page))
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(2)
+
+    await asyncio.sleep(7200)
 
 
 if __name__ == '__main__':
