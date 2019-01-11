@@ -167,7 +167,7 @@ async def insertSize(pool, size_info, product_info):
                     # 新增尺码数据
                     sql_insert = myFunc.insertSql(table_name3, {
                         'productId': product_info['productId'],
-                        'styleId': product_info['articleNumber'],
+                        'articleNumber': product_info['articleNumber'],
                         'size': size_info['size'],
                         'formatSize': size_info['formatSize'],
                         'price': json.dumps([size_info['item']['price']]),
