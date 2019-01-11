@@ -137,7 +137,7 @@ async def insertSize(pool, size_info, product_info):
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
-                size_keys = ['productId', 'size', 'formatSize', 'price', 'spiderTime', 'updateTime']
+                size_keys = ['productId', 'styleId', 'size', 'formatSize', 'price', 'spiderTime', 'updateTime']
                 size_keys = ",".join(size_keys)
                 # 判断尺码是否存在  并且是今天还没爬取过 储存为json方式
 
@@ -169,8 +169,8 @@ async def insertSize(pool, size_info, product_info):
                             product_info['productId']) + " and size = " + str(size_info['size']))
                 else:
                     sql_size = "INSERT INTO " + table_name3 + "(" + size_keys + ") " \
-                                                                                "VALUES (%s,%s,%s,%s,%s,%s)"
-                    size_data = [product_info['productId'], size_info['size'], size_info['formatSize'],
+                                                                                "VALUES (%s,%s,%s,%s,%s,%s,%s)"
+                    size_data = [product_info['productId'], product_info['articleNumber'], size_info['size'], size_info['formatSize'],
                                  json.dumps([size_info['item']['price']]),
                                  product_info['spiderTime'], product_info['spiderTime']]
                     await cur.execute(sql_size, size_data)
@@ -243,10 +243,10 @@ async def spiderInsert(pool, info_arr, sizeList):
                         rep_time = info_arr['sellDate'].replace('.', '-')
                         time_str = arrow.get(rep_time).timestamp
                         sold_add = info_arr['soldNum'] - row[1]
-                        sold_data = [info_arr['productId'], info_arr['soldNum'], sold_add, info_arr['spiderTime'],
+                        sold_data = [info_arr['productId'], info_arr['articleNumber'],info_arr['soldNum'], sold_add, info_arr['spiderTime'],
                                      time_str]
-                        sql_sold = "INSERT INTO " + table_name2 + "(productId,soldNum,soldAdd,spiderTime,sellDate) " \
-                                                                  "VALUES (%s,%s,%s,%s,%s)"
+                        sql_sold = "INSERT INTO " + table_name2 + "(productId,articleNumber,soldNum,soldAdd,spiderTime,sellDate) " \
+                                                                  "VALUES (%s,%s,%s,%s,%s,%s)"
                         logging.info("[记录商品]  商品：" + str(info_arr['title']))
                         await cur.execute(sql_sold, sold_data)
 
