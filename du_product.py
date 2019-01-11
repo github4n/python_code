@@ -1,4 +1,5 @@
 import common.conf as conf
+import common.function as myFunc
 import aiohttp, asyncio, arrow, logging, aiomysql, traceback, time
 
 log_name = "log/du_product_log.log"
@@ -51,6 +52,8 @@ async def spiderDetail(pool, urlKey):
         product_detail = await getData(url)
 
         # 插入对象赋值
+        if 'children' not in product_detail['Product']:
+            return
         size_list = product_detail['Product']['children']
         for v in size_list:
             if 'styleId' in size_list[v]:
@@ -71,6 +74,10 @@ async def spiderDetail(pool, urlKey):
                     info_arr['highestBid'] = size_list[v]['market']['highestBid']
                 else:
                     info_arr['highestBid'] = 0
+                if 'deadstockSold' in size_list[v]['market']:
+                    info_arr['deadstockSold'] = size_list[v]['market']['deadstockSold']
+                else:
+                    info_arr['deadstockSold'] = 0
                 # 等待插入
                 asyncio.ensure_future(spiderInsert(pool, info_arr))
     except:
@@ -83,47 +90,38 @@ async def spiderInsert(pool, info_arr):
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
+                sql_where = myFunc.selectSql(table_name, {
+                    'styleId': info_arr['styleId'],
+                    'shoeSize': info_arr['shoeSize']
+                })
                 # SQL 查询语句 判断是否存在
-                sql_where = "SELECT * FROM " + table_name + " WHERE styleId = %s AND shoeSize = %s"
-                sql_data = [info_arr['styleId'], info_arr['shoeSize']]
-                await cur.execute(sql_where, sql_data)
+                await cur.execute(sql_where)
                 row = await cur.fetchone()
                 if row:
-                    # 判断今天是否已经爬取过
                     if row[9]:
                         update_time = row[9]
                     else:
                         update_time = 0
                     is_spider = arrow.now().floor('day').timestamp - update_time
+                    # 判断今天是否已经爬取过   今日凌晨时间-爬取时间 > 0 则未爬取过
                     if is_spider > 0:
-                        # SQL 修改语句
-                        sql_edit = "UPDATE " + table_name + " SET lowestAsk=%s," + \
-                                   "highestBid=%s," + \
-                                   "updateTime=%s " + \
-                                   "WHERE styleId=%s and shoeSize=%s"
-                        edit_arr = [
-                            info_arr['lowestAsk'],
-                            info_arr['highestBid'],
-                            now_time,
-                            info_arr['styleId'],
-                            info_arr['shoeSize'],
-                        ]
                         # 修改尺码
-                        logging.info("[修改尺码] styleId：" + info_arr['styleId'] + ' size:' + info_arr['shoeSize'])
-                        await cur.execute(sql_edit, edit_arr)
-                else:
+                        sql_update = myFunc.updateSql(table_name, {
+                            'lowestAsk': info_arr['lowestAsk'],
+                            'highestBid': info_arr['highestBid'],
+                            'deadstockSold': info_arr['deadstockSold'],
+                            'lowestAsk': info_arr['lowestAsk'],
+                            'updateTime': now_time,
+                        }, {'styleId': info_arr['styleId'], 'shoeSize': info_arr['shoeSize']})
+                        await cur.execute(sql_update)
 
-                    add_keys = ",".join(info_arr.keys())
-                    add_vals = list(info_arr.values())
-                    str = []
-                    for i in range(len(add_vals)):
-                        str.append("%s")
-                    temp_str = ",".join(str)
-                    # SQL 插入语句
-                    sql = "INSERT INTO " + table_name + "(" + add_keys + ") VALUES (" + temp_str + ")"
-                    # logging.info("[添加商品] 商品：" + str(info_arr['title']))
-                    # 执行sql语句
-                    await cur.execute(sql, add_vals)
+                        logging.info("[修改尺码] " + sql_update)
+                else:
+                    # 添加尺码
+                    sql_insert = myFunc.insertSql(table_name, info_arr)
+                    await cur.execute(sql_insert)
+                    logging.info("[添加尺码] " + sql_insert)
+
     except:
         traceback.print_exc()
         logging.error("[处理商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
@@ -139,6 +137,7 @@ async def main(loop):
         asyncio.ensure_future(spiderList(loop, pool, page))
         await asyncio.sleep(1)
 
+    print("爬取完毕，等待 1 小时 结束脚本")
     await asyncio.sleep(3600)
 
 

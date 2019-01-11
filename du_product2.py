@@ -1,4 +1,5 @@
 import common.conf as conf
+import common.function as myFunc
 import pymysql, aiohttp, asyncio, hashlib, time, arrow, logging, aiomysql, traceback, json
 
 log_name = "log/du_product_log2.log"
@@ -137,44 +138,45 @@ async def insertSize(pool, size_info, product_info):
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
-                size_keys = ['productId', 'styleId', 'size', 'formatSize', 'price', 'spiderTime', 'updateTime']
-                size_keys = ",".join(size_keys)
-                # 判断尺码是否存在  并且是今天还没爬取过 储存为json方式
-
                 # SQL 查询语句 判断是否存在
-                sql_where = "SELECT price,updateTime FROM " + table_name3 + " WHERE productId = %s and size = %s"
-                sql_data = [product_info['productId'], size_info['size']]
-                await cur.execute(sql_where, sql_data)
-                row = await cur.fetchone()
+                sql_where = myFunc.selectSql(table_name3, {
+                    'productId': product_info['productId'], 'size': size_info['size']
+                }, ['price', 'updateTime'])
+                await cur.execute(sql_where)
 
+                row = await cur.fetchone()
                 if row:
-                    # 获取今天凌晨的时间  0：00
-                    today_time = arrow.now().floor('day').timestamp
                     # 只有更新时间小于今天凌晨的才修改
-                    if row[1] < today_time:
+                    if row[1] < arrow.now().floor('day').timestamp:
                         price_arr = json.loads(row[0])
                         price_arr.append(size_info['item']['price'])
 
-                        # 只保存60天的记录
+                        # 只保存60天价格的记录
                         while len(price_arr) > 60:
                             price_arr.pop(index=0)
 
-                        sql_edit = "UPDATE " + table_name3 + " SET price=%s,updateTime=%s where productId = %s and size = %s"
-                        sql_data = [json.dumps(price_arr), now_time, product_info['productId'],
-                                    size_info['size']]
-                        await cur.execute(sql_edit, sql_data)
+                        # 修改尺码数据
+                        sql_update = myFunc.updateSql(table_name3, {
+                            'price': json.dumps(price_arr),
+                            'updateTime': now_time,
+                        }, {'productId': product_info['productId'], 'size': size_info['size']})
+                        await cur.execute(sql_update)
 
                         logging.info('[修改尺码]' + str(product_info['productId']) + ":" + str(size_info['size']))
-                        logging.info("[修改尺码SQL] SELECT price FROM " + table_name3 + " WHERE productId = " + str(
-                            product_info['productId']) + " and size = " + str(size_info['size']))
                 else:
-                    sql_size = "INSERT INTO " + table_name3 + "(" + size_keys + ") " \
-                                                                                "VALUES (%s,%s,%s,%s,%s,%s,%s)"
-                    size_data = [product_info['productId'], product_info['articleNumber'], size_info['size'], size_info['formatSize'],
-                                 json.dumps([size_info['item']['price']]),
-                                 product_info['spiderTime'], product_info['spiderTime']]
-                    await cur.execute(sql_size, size_data)
+                    # 新增尺码数据
+                    sql_insert = myFunc.insertSql(table_name3, {
+                        'productId': product_info['productId'],
+                        'styleId': product_info['articleNumber'],
+                        'size': size_info['size'],
+                        'formatSize': size_info['formatSize'],
+                        'price': json.dumps([size_info['item']['price']]),
+                        'spiderTime': product_info['spiderTime'],
+                        'updateTime': product_info['spiderTime'],
+                    })
+                    await cur.execute(sql_insert)
                     logging.info('[添加尺码]' + str(product_info['productId']) + ":" + str(size_info['size']))
+
     except:
         traceback.print_exc()
         logging.error("[尺码处理] error:" + traceback.format_exc())
@@ -185,85 +187,62 @@ async def spiderInsert(pool, info_arr, sizeList):
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
-                # SQL 查询语句 判断是否存在
-                sql_where = "SELECT productId,soldNum FROM " + table_name + " WHERE productId = " + str(
-                    info_arr['productId'])
-                await cur.execute(sql_where)
-                row = await cur.fetchone()
-                if row:
-                    # SQL 修改语句
-                    sql_edit = "UPDATE " + table_name + " SET authPrice=%s," + \
-                               "brandId=%s," + \
-                               "typeId=%s," + \
-                               "logoUrl=%s," + \
-                               "title=%s," + \
-                               "soldNum=%s," + \
-                               "sellDate=%s," + \
-                               "color=%s," + \
-                               "sizeList=%s," + \
-                               "rapidlyExpressTips=%s," + \
-                               "exchangeDesc=%s," + \
-                               "dispatchName=%s," + \
-                               "updateTime=%s, " + \
-                               "articleNumber=%s " + \
-                               "WHERE productId=%s"
-                    edit_arr = [
-                        info_arr['authPrice'],
-                        info_arr['brandId'],
-                        info_arr['typeId'],
-                        info_arr['logoUrl'],
-                        info_arr['title'],
-                        info_arr['soldNum'],
-                        info_arr['sellDate'],
-                        info_arr['color'],
-                        info_arr['sizeList'],
-                        info_arr['rapidlyExpressTips'],
-                        info_arr['exchangeDesc'],
-                        info_arr['dispatchName'],
-                        info_arr['spiderTime'],
-                        info_arr['articleNumber'],
-                        info_arr['productId'],
-                    ]
-                    logging.info("[修改商品]  商品：" + str(info_arr['title']))
-                    # 修改商品
-                    await cur.execute(sql_edit, edit_arr)
-                else:
-                    add_keys = ",".join(info_arr.keys())
-                    add_vals = list(info_arr.values())
-                    # SQL 插入语句
-                    sql = "INSERT INTO " + table_name + "(" + add_keys + ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-
-                    logging.info("[添加商品] 商品：" + str(info_arr['title']))
-                    # 执行sql语句
-                    await cur.execute(sql, add_vals)
-
-                if row:
-                    # 单独记录2018年的新款商品
-                    if str(info_arr['sellDate'][0:4]) == '2018':
-                        rep_time = info_arr['sellDate'].replace('.', '-')
-                        time_str = arrow.get(rep_time).timestamp
-                        sold_add = info_arr['soldNum'] - row[1]
-                        sold_data = [info_arr['productId'], info_arr['articleNumber'],info_arr['soldNum'], sold_add, info_arr['spiderTime'],
-                                     time_str]
-                        sql_sold = "INSERT INTO " + table_name2 + "(productId,articleNumber,soldNum,soldAdd,spiderTime,sellDate) " \
-                                                                  "VALUES (%s,%s,%s,%s,%s,%s)"
-                        logging.info("[记录商品]  商品：" + str(info_arr['title']))
-                        await cur.execute(sql_sold, sold_data)
-
-                        # 记录sizelist
-                        for v in sizeList:
-                            if 'price' in v['item'] and v['item']['price'] != 0:
-                                asyncio.ensure_future(insertSize(pool, v, info_arr))
-
+                # 只记录2018年的新款商品
+                if str(info_arr['sellDate'][0:4]) != '2018':
                     return
 
-    except :
+                # 查询数据是否已经存在
+                sql_where = myFunc.selectSql(table_name, {
+                    'productId': info_arr['productId']
+                }, ['productId', 'soldNum'])
+                await cur.execute(sql_where)
+
+                row = await cur.fetchone()
+                if row:
+                    # 更新已有数据
+                    sql_update = myFunc.updateSql(table_name, {
+                        'authPrice': info_arr['authPrice'],
+                        'soldNum': info_arr['soldNum'],
+                        'updateTime': info_arr['spiderTime'],
+                    }, {'articleNumber': info_arr['articleNumber']})
+                    await cur.execute(sql_update)
+
+                    logging.info("[修改商品] " + sql_update)
+                else:
+                    # 添加商品
+                    sql_insert = myFunc.insertSql(table_name, info_arr)
+                    await cur.execute(sql_insert)
+                    logging.info("[添加商品] " + sql_insert)
+
+
+                    # 处理发售年份
+                    # rep_time = info_arr['sellDate'].replace('.', '-')
+                    # time_str = arrow.get(rep_time).timestamp
+                    # # 计算与昨日的销售差
+                    # sold_add = info_arr['soldNum'] - row[1]
+                    # sql_insert = myFunc.insertSql(table_name2, {
+                    #     'productId': info_arr['productId'],
+                    #     'articleNumber': info_arr['articleNumber'],
+                    #     'soldNum': info_arr['soldNum'],
+                    #     'soldAdd': sold_add,
+                    #     'spiderTime': info_arr['spiderTime'],
+                    #     'sellDate': time_str,
+                    # })
+                    # await cur.execute(sql_insert)
+
+                    # logging.info("[记录商品] " + sql_insert)
+
+                # 记录各类尺码
+                for v in sizeList:
+                    if 'price' in v['item'] and v['item']['price'] != 0:
+                        asyncio.ensure_future(insertSize(pool, v, info_arr))
+
+    except:
         traceback.print_exc()
         logging.error("[处理商品] 商品：" + str(info_arr['title']) + " error:" + traceback.format_exc())
 
 
 async def main(loop):
-
     # 等待mysql连接好
     pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
                                       user=conf.database['user'], password=conf.database['passwd'],

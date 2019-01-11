@@ -29,3 +29,75 @@ def console_out(file_name, type, msg):
         logging.warning(msg)
     if type == 'error':
         logging.error(msg)
+
+
+# 获取插入sql
+def insertSql(table_name, data_arr):
+    add_keys = '(' + ",".join(data_arr.keys()) + ')'
+    add_vals = list(data_arr.values())
+    add_vals = '(' + ",".join('\'%s\'' % v for v in add_vals) + ')'
+
+    # SQL 插入语句
+    sql_arr = [
+        'INSERT',
+        'INTO',
+        table_name,
+        add_keys,
+        'VALUES',
+        add_vals,
+    ]
+    sql = ' '.join(sql_arr)
+    return sql
+
+# 获取查询sql
+def selectSql(table_name, where={}, field=[]):
+    if len(field) > 0:
+        field_str = ",".join(field)
+    else:
+        field_str = '*'
+
+    if len(where) > 0:
+        where_arr = []
+        for k, v in where.items():
+            where_arr.append(str(k) + '=' + "'" + str(v) + "'")
+        where_str = ' and '.join(where_arr)
+    else:
+        where_str = ''
+
+    sql_arr = [
+        'SELECT',
+        field_str,
+        'FROM',
+        table_name,
+        'WHERE',
+        where_str
+    ]
+    sql = ' '.join(sql_arr)
+    return sql
+
+# 获取修改sql
+def updateSql(table_name, update={}, where={}):
+    if len(update) > 0:
+        update_arr = []
+        for k, v in update.items():
+            update_arr.append(str(k) + '=' + "'" + str(v) + "'")
+            update_str = ','.join(update_arr)
+    else:
+        update_str = ''
+    if len(where) > 0:
+        where_arr = []
+        for k, v in where.items():
+            where_arr.append(str(k) + '=' + "'" + str(v) + "'")
+        where_str = ' and '.join(where_arr)
+    else:
+        where_str = ''
+    sql_arr = [
+        'UPDATE',
+        table_name,
+        'SET',
+        update_str,
+        'WHERE',
+        where_str
+    ]
+    sql = ' '.join(sql_arr)
+    return sql
