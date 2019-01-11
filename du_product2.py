@@ -124,7 +124,7 @@ async def spiderDetail(pool, product):
             'exchangeDesc': pymysql.escape_string(info['exchangeDesc']),
             'dispatchName': pymysql.escape_string(info['dispatchName']),
             'articleNumber': info['detail']['articleNumber'],
-            'spiderTime': int(time.time()),
+            'spiderTime': now_time,
         }
         # 等待插入
         await spiderInsert(pool, info_arr, info['sizeList'])
@@ -271,7 +271,7 @@ async def main(loop):
 
     for page in range(400):
         asyncio.ensure_future(spiderList(pool, page))
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
 
     await asyncio.sleep(7200)
 
