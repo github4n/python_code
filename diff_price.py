@@ -19,7 +19,6 @@ cursor = db.cursor()
 sql = myFunc.selectSql('dollar',{'id':1},['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
-print(dollar)
 sql = "SELECT * From stockx_product_size"
 cursor.execute(sql)
 rows = cursor.fetchall()
