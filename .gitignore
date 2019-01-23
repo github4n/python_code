@@ -15,7 +15,6 @@ get_url.py
 final_asyncio.py
 du_user2.py
 du_user.py
-du.py
 async_spider.py
 api_test.py
 common/__pycache__/conf.cpython-37.pyc
