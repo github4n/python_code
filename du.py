@@ -112,6 +112,7 @@ def getApiUrl(api_url, api_params):
 
     return url
 
+
 # 组装最终访问链接
 async def fetch(client, url):
     i = 1
@@ -272,11 +273,9 @@ async def main(loop):
             logging.info("[爬取完成]所有爬取进程已经全部完成")
 
 
-
 if __name__ == '__main__':
     # 获取用户token
     getToken()
     loop = asyncio.get_event_loop()
     task = asyncio.ensure_future(main(loop))
     loop.run_until_complete(task)
-

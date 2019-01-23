@@ -50,7 +50,7 @@ def insertSql(table_name, data_arr):
     return sql
 
 # 获取查询sql
-def selectSql(table_name, where={}, field=[]):
+def selectSql(table_name, where={}, field=[], orderby = False, limit = False):
     if len(field) > 0:
         field_str = ",".join(field)
     else:
@@ -63,6 +63,15 @@ def selectSql(table_name, where={}, field=[]):
         where_str = ' and '.join(where_arr)
     else:
         where_str = ''
+    if orderby:
+        order_str = 'ORDER BY ' + str(orderby)
+    else:
+        order_str = ''
+
+    if limit:
+        limit_str = 'LIMIT ' + str(limit)
+    else:
+        limit_str = ''
 
     sql_arr = [
         'SELECT',
@@ -70,8 +79,13 @@ def selectSql(table_name, where={}, field=[]):
         'FROM',
         table_name,
         'WHERE',
-        where_str
+        where_str,
+        order_str,
+        limit_str
     ]
+
+
+
     sql = ' '.join(sql_arr)
     return sql
 
