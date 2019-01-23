@@ -22,3 +22,11 @@ common/__pycache__/conf.cpython-37.pyc
 common/__pycache__/
 *.log
 test_arrow.py
+du_spider.py
+findGoods.py
+no_size.txt
+__pycache__/du.cpython-37.pyc
+test_appmuin.py
+du_product2.py
+du_product.py
+styleId.txt
