@@ -291,7 +291,7 @@ async def main(loop):
 
         if task in done:
             print('[爬取完成]所有爬取进程已经全部完成')
-            logging.error("[爬取完成]所有爬取进程已经全部完成")
+            logging.info("[爬取完成]所有爬取进程已经全部完成")
 
 
 
