@@ -45,14 +45,14 @@ try:
                 'articleNumber': v[2],
                 'size': size,
             }, {}, 'spiderTime desc', 1)
-            
+
             cursor.execute(sql_where)
             data = cursor.fetchone()
             if data:
                 # 获取毒的价格
                 du_price = data[3] / 100
                 # stockx价格
-                stockx_price = round(float(v[6]) * 6.8, 2)
+                stockx_price = round(v[6] * dollar, 2)
                 # print('货号：', data[7], ' size:', data[2], ' price:', price)
                 # print('货号: ', v[2], ' size:', size, ' price:', round(float(v[6]) * 6.8, 2))
 
