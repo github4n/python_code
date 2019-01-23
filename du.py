@@ -2,7 +2,6 @@ import logging
 
 import common.conf as conf
 import common.function as myFunc
-import json
 import hashlib
 import arrow
 import pymysql
@@ -221,6 +220,7 @@ async def insert(pool, info_arr, sizeList):
                     await cur.execute(sql_update)
                 else:
                     # 添加商品
+                    info_arr['updateTime'] = now_time
                     sql_insert = myFunc.insertSql(TABLE['product'], info_arr)
                     await cur.execute(sql_insert)
 
@@ -243,9 +243,9 @@ async def insertSize(pool, size_info):
             async with conn.cursor() as cur:
                 # SQL 查询语句 判断是否存在
                 sql_where = myFunc.selectSql(TABLE['size'], {
-                    'productId': productId,
+                    'articleNumber': articleNumber,
                     'size': size_info['size']
-                }, ['price', 'updateTime'])
+                }, ['price', 'spiderTime'])
                 await cur.execute(sql_where)
 
                 # 获取数据
@@ -253,16 +253,9 @@ async def insertSize(pool, size_info):
                 if row:
                     # 只有更新时间小于今天凌晨的才修改
                     if row[1] < arrow.now().floor('day').timestamp:
-                        price_arr = json.loads(row[0])
-                        price_arr.append(size_info['item']['price'])
-
-                        # 只保存60天价格的记录
-                        while len(price_arr) > 60:
-                            price_arr.pop(index=0)
-
                         # 修改尺码数据
                         sql_update = myFunc.updateSql(TABLE['size'], {
-                            'price': json.dumps(price_arr),
+                            'price': size_info['item']['price'],
                             'updateTime': now_time,
                         }, {'productId': productId, 'size': size_info['size']})
                         await cur.execute(sql_update)
@@ -270,13 +263,11 @@ async def insertSize(pool, size_info):
                 else:
                     # 新增尺码数据
                     sql_insert = myFunc.insertSql(TABLE['size'], {
-                        'productId': productId,
                         'articleNumber': articleNumber,
                         'size': size_info['size'],
                         'formatSize': size_info['formatSize'],
-                        'price': json.dumps([size_info['item']['price']]),
+                        'price': size_info['item']['price'],
                         'spiderTime': now_time,
-                        'updateTime': now_time,
                     })
                     await cur.execute(sql_insert)
     except:

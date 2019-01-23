@@ -1,4 +1,7 @@
+import arrow
+
 import common.conf as conf
+import common.function as myFunc
 import requests, pymysql
 from bs4 import BeautifulSoup
 
@@ -11,7 +14,6 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      db=conf.database['db'], charset='utf8')
 
 cursor = db.cursor()
-sql = "UPDATE `dollar` SET `val`=%s WHERE (`id`='1');"
-cursor.execute(sql, val)
+sql = myFunc.updateSql('dollar', {'val': val, 'spiderTime': arrow.now().timestamp}, {'id': 1})
+cursor.execute(sql)
 db.close()
-
