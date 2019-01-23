@@ -235,41 +235,19 @@ async def insert(pool, info_arr, sizeList):
 
 async def insertSize(pool, size_info):
     try:
-
-        productId = size_info['item']['product']['productId']
         articleNumber = size_info['item']['product']['articleNumber']
         # 链接数据库  获取数据库游标
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
-                # SQL 查询语句 判断是否存在
-                sql_where = myFunc.selectSql(TABLE['size'], {
+                # 新增尺码数据
+                sql_insert = myFunc.insertSql(TABLE['size'], {
                     'articleNumber': articleNumber,
-                    'size': size_info['size']
-                }, ['price', 'spiderTime'])
-                await cur.execute(sql_where)
-
-                # 获取数据
-                row = await cur.fetchone()
-                if row:
-                    # 只有更新时间小于今天凌晨的才修改
-                    if row[1] < arrow.now().floor('day').timestamp:
-                        # 修改尺码数据
-                        sql_update = myFunc.updateSql(TABLE['size'], {
-                            'price': size_info['item']['price'],
-                            'updateTime': now_time,
-                        }, {'productId': productId, 'size': size_info['size']})
-                        await cur.execute(sql_update)
-
-                else:
-                    # 新增尺码数据
-                    sql_insert = myFunc.insertSql(TABLE['size'], {
-                        'articleNumber': articleNumber,
-                        'size': size_info['size'],
-                        'formatSize': size_info['formatSize'],
-                        'price': size_info['item']['price'],
-                        'spiderTime': now_time,
-                    })
-                    await cur.execute(sql_insert)
+                    'size': size_info['size'],
+                    'formatSize': size_info['formatSize'],
+                    'price': size_info['item']['price'],
+                    'spiderTime': now_time,
+                })
+                await cur.execute(sql_insert)
     except:
         traceback.print_exc()
         logging.error("[插入尺码] error!:" + str(traceback.format_exc()))
