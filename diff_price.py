@@ -16,7 +16,7 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
                      db=conf.database['db'], charset='utf8')
 cursor = db.cursor()
-sql = myFunc.selectSql('dollar',{'id':1},['val'])
+sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
 sql = "SELECT * From stockx_product_size"
@@ -44,8 +44,8 @@ try:
             sql_where = myFunc.selectSql('product_size', {
                 'articleNumber': v[2],
                 'size': size,
-            },{},'spiderTime desc', 1)
-            print(sql_where)
+            }, {}, 'spiderTime desc', 1)
+            
             cursor.execute(sql_where)
             data = cursor.fetchone()
             if data:
@@ -59,7 +59,6 @@ try:
                 diff = round(du_price - stockx_price, 2)
                 # 如果差价在100以上
                 if diff > 100:
-
                     # 查询这款鞋子在毒的销量
                     sql_where = myFunc.selectSql('product', {'articleNumber': v[2]}, ['soldNum'])
                     cursor.execute(sql_where)
