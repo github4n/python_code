@@ -11,7 +11,6 @@ table_name = "stockx_product_size"
 table_name2 = "product_sold"
 table_name3 = "product_size"
 
-
 now_time = arrow.now().timestamp
 
 
@@ -134,12 +133,15 @@ async def main(loop):
     pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
                                       user=conf.database['user'], password=conf.database['passwd'],
                                       db=conf.database['db'], loop=loop)
+
     for page in range(30):
-        asyncio.ensure_future(spiderList(loop, pool, page))
+        task = asyncio.create_task(spiderList(loop, pool, page))
         await asyncio.sleep(1)
 
-    print("爬取完毕，等待 1 小时 结束脚本")
-    await asyncio.sleep(3600)
+    done, pending = await asyncio.wait({task})
+    if task in done:
+        print('[爬取完成]所有爬取进程已经全部完成')
+        logging.info("[爬取完成]所有爬取进程已经全部完成")
 
 
 if __name__ == '__main__':
