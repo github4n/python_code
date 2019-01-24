@@ -1,8 +1,8 @@
 import traceback
+
 import common.conf as conf
 import common.function as myFunc
 import pymysql, json, xlsxwriter, arrow
-import numpy as np
 
 # 初始化excel
 # filename = '对比差价' + arrow.now().format('YYYY-MM-DD') + '.xlsx'
@@ -52,9 +52,7 @@ try:
                 # 获取毒的价格
                 du_price = data[3] / 100
                 # stockx价格
-                stockx_price = np.array(v)
-
-                stockx_price = round(stockx_price[6] * dollar, 2)
+                stockx_price = round(float(v[6]) * float(dollar), 2)
                 # print('货号：', data[7], ' size:', data[2], ' price:', price)
                 # print('货号: ', v[2], ' size:', size, ' price:', round(float(v[6]) * 6.8, 2))
 
@@ -71,7 +69,7 @@ try:
                         'size': size,
                         'duPrice': du_price,
                         'soldNum': ret_product[0],
-                        'stockxPrice': round(float(v[6]) * dollar, 2),
+                        'stockxPrice': stockx_price,
                         'imageUrl': v[4],
                         'createTime': arrow.now().timestamp,
                     }
