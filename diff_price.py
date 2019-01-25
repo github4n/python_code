@@ -2,7 +2,7 @@ import traceback
 
 import common.conf as conf
 import common.function as myFunc
-import pymysql, json, xlsxwriter, arrow
+import pymysql, json, xlsxwriter, arrow,logging
 
 # 初始化excel
 # filename = '对比差价' + arrow.now().format('YYYY-MM-DD') + '.xlsx'
@@ -15,7 +15,18 @@ col = 0
 db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
                      db=conf.database['db'], charset='utf8')
+
+
+# 日志配置
+log_name = "log/diff.log"
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+
+
 cursor = db.cursor()
+# 清空表
+sql = 'TRUNCATE TABLE diff'
+cursor.execute(sql)
 sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
@@ -29,11 +40,10 @@ try:
         size = size.replace('y', '')
         size = size.replace('K', '')
         size = size.replace('W', '')
+
         # 把奇怪的码数保存起来
         if size not in conf.size_conf:
-            # f2.writelines(size + '\n')
-            if float(size) >= 20:
-                size = size
+            logging.info(size)
         else:
             # 去除一些奇怪的码
             if len(size) <= 4 and float(size) < 20:
@@ -49,6 +59,9 @@ try:
             cursor.execute(sql_where)
             data = cursor.fetchone()
             if data:
+                sql = myFunc.selectSql('product',{'articleNumber': v[2]}, ['title'])
+                cursor.execute(sql)
+                product_info = cursor.fetchone()
                 # 获取毒的价格
                 du_price = data[3] / 100
                 # stockx价格
@@ -58,20 +71,24 @@ try:
 
                 diff = round(du_price - stockx_price, 2)
                 # 如果差价在100以上
-                if diff > 100:
+                if diff > 100 and stockx_price != 0:
                     # 查询这款鞋子在毒的销量
-                    sql_where = myFunc.selectSql('product', {'articleNumber': v[2]}, ['soldNum'])
+                    sql_where = myFunc.selectSql('product', {'articleNumber': v[2]}, ['soldNum', 'logoUrl'])
                     cursor.execute(sql_where)
                     ret_product = cursor.fetchone()
+
                     data = {
                         'articleNumber': v[2],
+                        'title': pymysql.escape_string(v[1]),
+                        'du_title': pymysql.escape_string(product_info[0]),
                         'diffPrice': diff,
                         'size': size,
                         'duPrice': du_price,
                         'soldNum': ret_product[0],
                         'stockxPrice': stockx_price,
-                        'imageUrl': v[4],
+                        'imageUrl': pymysql.escape_string(ret_product[1]),
                         'createTime': arrow.now().timestamp,
+                        'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
                     }
                     insert_sql = myFunc.insertSql('diff', data)
                     cursor.execute(insert_sql)

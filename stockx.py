@@ -1,6 +1,6 @@
 import common.conf as conf
 import common.function as myFunc
-import aiohttp, asyncio, arrow, logging, aiomysql, traceback
+import aiohttp, asyncio, arrow, logging, aiomysql, traceback,pymysql
 
 log_name = "log/du_product_log.log"
 
@@ -8,10 +8,23 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%
                     datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
 table_name = "stockx_product_size"
-table_name2 = "product_sold"
-table_name3 = "product_size"
-
 now_time = arrow.now().timestamp
+# 域名
+DOMAIN = 'https://stockx.com'
+# 接口地址
+URL = {
+    'featured': '/api/browse?productCategory=sneakers&page=',
+    'newLowestAsks': '/api/browse?currency=GBP&order=DESC&productCategory=sneakers&sort=recent_asks&page=',
+    'newHighestBids': '/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=recent_bids&page=',
+    'averageSoldPrice': '/api/browse?order=DESC&productCategory=sneakers&sort=average_deadstock_price&page=',
+    'totalSold': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
+    'volatility': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
+    'pricePremiun': '/api/browse?order=DESC&productCategory=sneakers&sort=price_premium&page=',
+    'lastSale': '/api/browse?order=DESC&productCategory=sneakers&sort=last_sale&page=',
+    'lowestAsk': '/api/browse?order=ASC&productCategory=sneakers&sort=lowest_ask&page=',
+    'highestBid': '/api/browse?order=DESC&productCategory=sneakers&sort=highest_bid&page=',
+    'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
+}
 
 
 async def getData(url):
@@ -19,20 +32,20 @@ async def getData(url):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=conf.headers, timeout=60) as resp:
                 if resp.status == 200:
+                    print('URL: ', url)
                     ret_json = await resp.json()
                     return ret_json
 
     except:
+        print('[ERROR] URL: ', url)
         traceback.print_exc()
         logging.error("[爬取错误]" + traceback.format_exc())
 
 
-async def spiderList(loop, pool, page):
+async def spiderList(pool, api_url):
     try:
         # 等待返回结果
-        url = 'https://stockx.com/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=most-active&page=' + str(
-            page)
-        data = await getData(url)
+        data = await getData(api_url)
         productList = data['Products']
 
         # 遍历商品列表获取详情
@@ -58,11 +71,11 @@ async def spiderDetail(pool, urlKey):
         for v in size_list:
             if 'styleId' in size_list[v]:
                 info_arr = {
-                    'title': size_list[v]['title'],
+                    'title': pymysql.escape_string(size_list[v]['title']),
                     'styleId': size_list[v]['styleId'],
                     'shoeSize': size_list[v]['shoeSize'],
                     'year': size_list[v]['year'],
-                    'imageUrl': size_list[v]['media']['imageUrl'],
+                    'imageUrl': pymysql.escape_string(size_list[v]['media']['imageUrl']),
                     'spiderTime': now_time,
                     'updateTime': now_time,
                 }
@@ -133,10 +146,11 @@ async def main(loop):
     pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
                                       user=conf.database['user'], password=conf.database['passwd'],
                                       db=conf.database['db'], loop=loop)
-
-    for page in range(30):
-        task = asyncio.create_task(spiderList(loop, pool, page))
-        await asyncio.sleep(1)
+    for k, v in URL.items():
+        for page in range(30):
+            api_url = DOMAIN + v + str(page)
+            task = asyncio.create_task(spiderList(pool, api_url))
+            await asyncio.sleep(1)
 
     done, pending = await asyncio.wait({task})
     if task in done:

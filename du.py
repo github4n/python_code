@@ -1,4 +1,5 @@
 import logging
+import time
 
 import common.conf as conf
 import common.function as myFunc
@@ -6,7 +7,7 @@ import hashlib
 import arrow
 import pymysql
 import requests, traceback
-import aiohttp, asyncio, aiomysql
+import aiohttp, asyncio, aiomysql, pymysql
 
 # header头设置
 HEADERS = {
@@ -30,13 +31,16 @@ URL = {
     # 商品列表地址
     'list': '/search/list',
     # 详情地址
-    'detail': '/product/detail'
+    'detail': '/product/detail',
+    # 尺码
+    'size': '/product/lastSoldList',
 }
 # 表设置
 TABLE = {
     'product': 'product',
     'sold': 'product_sold',
     'size': 'product_size',
+    'token': 'dollar',
 }
 # 商品爬取配置
 PRODUCT = {
@@ -52,20 +56,73 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%
 
 
 # 获取用户登录的token
-def getToken():
+def getToken(force=False):
+    db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
+                         user=conf.database['user'], password=conf.database['passwd'],
+                         db=conf.database['db'], charset='utf8')
+    cursor = db.cursor()
+
+    mysql_data = {}
+    # 获取数据库token
+    sql = myFunc.selectSql(TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
+    cursor.execute(sql)
+    ret_token = cursor.fetchone()
+    # 都有数据的情况下  爬取时间不超三天则不重新登录
+    if not (ret_token[1] is None) and not (ret_token[0] is None):
+        diff_time = arrow.now().timestamp - ret_token[1]
+        # 爬取时间大于三天重新获取
+        if diff_time <= (3600 * 24 * 3):
+            mysql_data['token'] = ret_token[0]
+
+    # 获取数据库cookie
+    sql = myFunc.selectSql(TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
+    cursor.execute(sql)
+    ret_cookie = cursor.fetchone()
+    # 都有数据的情况下  爬取时间不超三天则不重新登录
+    if not (ret_cookie[1] is None) and not (ret_cookie[0] is None):
+        diff_time = arrow.now().timestamp - ret_cookie[1]
+        # 爬取时间大于三天重新获取
+        if diff_time <= (3600 * 24 * 3):
+            mysql_data['cookie'] = ret_cookie[0]
+
+    if 'token' in mysql_data and 'cookie' in mysql_data and not force:
+        HEADERS['duloginToken'] = mysql_data['token']
+        HEADERS['Cookie'] = mysql_data['cookie']
+        print('获取数据库 token，cookie')
+        return
+
+    # 重置
+    HEADERS['Cookie'] = ''
+    HEADERS['duloginToken'] = ''
+    # 重新登录
     ret = requests.post(URL['domain'] + URL['login'], data=USER, headers=HEADERS)
 
     if ret.status_code != 200:
         print("获取用户token失败")
+        return
 
     ret_data = ret.json()
     if ret_data['status'] != 200:
         print(ret_data['msg'])
+        return
 
     # 设置cookie
     HEADERS['Cookie'] = ret.headers['Set-Cookie']
+    sql = myFunc.updateSql(TABLE['token'], {
+        'val': HEADERS['Cookie'],
+        'spiderTime': now_time,
+    }, {'key': 'cookie'})
+    cursor.execute(sql)
+
     # 设置用户登录token
     HEADERS['duloginToken'] = ret_data['data']['loginInfo']['loginToken']
+    sql = myFunc.updateSql(TABLE['token'], {
+        'val': ret_data['data']['loginInfo']['loginToken'],
+        'spiderTime': now_time,
+    }, {'key': 'token'})
+    cursor.execute(sql)
+    db.close()
+    print('重新登录')
 
 
 # 获取签名p
@@ -116,13 +173,22 @@ def getApiUrl(api_url, api_params):
 # 组装最终访问链接
 async def fetch(client, url):
     i = 1
-    while i < 3:
+    while i <= 3:
         try:
             async with client.get(url, headers=HEADERS, timeout=30) as res:
                 assert res.status == 200
-                return await res.json()
+                # <coroutine object ClientResponse.text at 0x109b8ddb0>
+                # 要获取HTML页面的内容, 必须在 resp.json() 前面使用 await
+                res_json = await res.json()
+                if res_json['status'] != 200:
+                    print(res_json)
+                    return
+                print('URL: ', url)
+                return res_json
         except:
-            logging.error("[链接错误] 第 " + str(i) + ' 尝试重连URL:' + url)
+            time.sleep(5)
+            print("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
+            logging.error("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
             i += 1
 
 
@@ -193,6 +259,9 @@ async def getDetail(pool, client, productId):
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
+
+
+
 async def insert(pool, info_arr, sizeList):
     try:
 
@@ -234,6 +303,7 @@ async def insert(pool, info_arr, sizeList):
         logging.error("[插入商品] error!:" + str(traceback.format_exc()))
 
 
+# 记录尺码信息
 async def insertSize(pool, size_info):
     try:
         articleNumber = size_info['item']['product']['articleNumber']
@@ -264,7 +334,7 @@ async def main(loop):
     async with aiohttp.ClientSession() as client:
         for page in range(400):
             task = asyncio.create_task(getList(pool, client, page))
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(3)
 
         done, pending = await asyncio.wait({task})
 
@@ -276,6 +346,7 @@ async def main(loop):
 if __name__ == '__main__':
     # 获取用户token
     getToken()
+
     loop = asyncio.get_event_loop()
     task = asyncio.ensure_future(main(loop))
     loop.run_until_complete(task)

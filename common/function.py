@@ -101,7 +101,7 @@ def updateSql(table_name, update={}, where={}):
     if len(where) > 0:
         where_arr = []
         for k, v in where.items():
-            where_arr.append(str(k) + '=' + "'" + str(v) + "'")
+            where_arr.append("`" + str(k) + "`" + '=' + "'" + str(v) + "'")
         where_str = ' and '.join(where_arr)
     else:
         where_str = ''
