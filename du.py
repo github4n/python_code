@@ -41,6 +41,8 @@ TABLE = {
     'sold': 'product_sold',
     'size': 'product_size',
     'token': 'dollar',
+    'dollar': 'dollar',
+    'diff': 'diff',
 }
 # 商品爬取配置
 PRODUCT = {

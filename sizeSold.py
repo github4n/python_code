@@ -138,7 +138,7 @@ async def getAllList(pool, client):
 
                 if task in done:
                     print('[主程2]所有商品列表size统计完毕')
-                    du.logging.info("[主程2]所有商品列表size统计完毕")
+                    logging.info("[主程2]所有商品列表size统计完毕")
     except:
         logging.error("[爬取详情] error!:" + str(du.traceback.format_exc()))
         du.traceback.print_exc()
@@ -158,7 +158,7 @@ async def main(loop):
 
         if task in done:
             print('[主程]所有商品列表size统计完毕')
-            du.logging.info("[主程]所有商品列表size统计完毕")
+            logging.info("[主程]所有商品列表size统计完毕")
 
 
 if __name__ == '__main__':
