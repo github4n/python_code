@@ -133,7 +133,6 @@ async def getAllList(pool, client):
                     task = du.asyncio.create_task(
                         getSizeSoldNum(pool, client, {'productId': v[0], 'articleNumber': v[1]}))
                     await du.asyncio.sleep(0.5)
-                    break
 
                 done, pending = await du.asyncio.wait({task})
 
