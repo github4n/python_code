@@ -91,23 +91,25 @@ async def diff_size(pool, v, dollar):
                         ret_size = await cur.fetchone()
                         if ret_size:
                             soldNum = ret_size[0]
+                        else:
+                            soldNum = 0
 
-                            data = {
-                                'articleNumber': v[2],
-                                'title': pymysql.escape_string(v[1]),
-                                'du_title': pymysql.escape_string(product_info[0]),
-                                'diffPrice': diff,
-                                'size': size,
-                                'duPrice': du_price,
-                                'soldNum': soldNum,
-                                'stockxPrice': stockx_price,
-                                'imageUrl': pymysql.escape_string(ret_product[0]),
-                                'createTime': arrow.now().timestamp,
-                                'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
-                            }
-                            insert_sql = myFunc.insertSql(du.TABLE['diff'], data)
-                            await cur.execute(insert_sql)
-                            print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
+                        data = {
+                            'articleNumber': v[2],
+                            'title': pymysql.escape_string(v[1]),
+                            'du_title': pymysql.escape_string(product_info[0]),
+                            'diffPrice': diff,
+                            'size': size,
+                            'duPrice': du_price,
+                            'soldNum': soldNum,
+                            'stockxPrice': stockx_price,
+                            'imageUrl': pymysql.escape_string(ret_product[0]),
+                            'createTime': arrow.now().timestamp,
+                            'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
+                        }
+                        insert_sql = myFunc.insertSql(du.TABLE['diff'], data)
+                        await cur.execute(insert_sql)
+                        print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
 
 
 async def main(loop):
