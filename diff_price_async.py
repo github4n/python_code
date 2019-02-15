@@ -70,7 +70,6 @@ async def diff_size(pool, v, dollar):
                         'size': size,
                     }, {}, 'spiderTime desc', 1)
 
-
                     await cur.execute(sql_where)
                     data = await cur.fetchone()
                     if data:
