@@ -23,7 +23,7 @@ async def diff(pool):
                 ret_dollar = await cur.fetchone()
                 dollar = ret_dollar[0]
                 # 获取stockx的所有数据
-                sql = myFunc.selectSql(conf.TABLE['stockx'], {"styleId": '555088-311'})
+                sql = myFunc.selectSql(conf.TABLE['stockx'])
                 await cur.execute(sql)
                 rows = await cur.fetchall()
                 try:

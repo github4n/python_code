@@ -28,7 +28,7 @@ cursor.execute(sql)
 sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
-sql = myFunc.selectSql(conf.TABLE['stockx'], {"styleId": '555088-311'})
+sql = myFunc.selectSql(conf.TABLE['stockx'])
 cursor.execute(sql)
 rows = cursor.fetchall()
 start_time = arrow.now().timestamp
