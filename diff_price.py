@@ -103,5 +103,6 @@ try:
                     row += 1
                     print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
 except:
+    logging.info(traceback.format_exc())
     traceback.print_exc()
 
