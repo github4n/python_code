@@ -2,7 +2,7 @@ import traceback
 import du
 import common.conf as conf
 import common.function as myFunc
-import pymysql, json, xlsxwriter, arrow,logging,asyncio,aiomysql
+import pymysql, json, xlsxwriter, arrow, logging, asyncio, aiomysql
 
 # 初始化excel
 # filename = '对比差价' + arrow.now().format('YYYY-MM-DD') + '.xlsx'
@@ -16,12 +16,10 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
                      db=conf.database['db'], charset='utf8')
 
-
 # 日志配置
 log_name = "log/diff.log"
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
-
 
 cursor = db.cursor()
 # 清空表
@@ -30,7 +28,7 @@ cursor.execute(sql)
 sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
-sql = "SELECT * From stockx_product_size"
+sql = myFunc.selectSql(du.TABLE['stockx'], {"styleId": '555088-311'})
 cursor.execute(sql)
 rows = cursor.fetchall()
 start_time = arrow.now().timestamp
@@ -41,7 +39,6 @@ try:
         size = size.replace('y', '')
         size = size.replace('K', '')
         size = size.replace('W', '')
-
         # 把奇怪的码数保存起来
         if size not in conf.size_conf:
             logging.info(v[1] + ' ' + v[2] + ' ' + size)
@@ -60,7 +57,7 @@ try:
             cursor.execute(sql_where)
             data = cursor.fetchone()
             if data:
-                sql = myFunc.selectSql('product',{'articleNumber': v[2]}, ['title'])
+                sql = myFunc.selectSql('product', {'articleNumber': v[2]}, ['title'])
                 cursor.execute(sql)
                 product_info = cursor.fetchone()
                 # 获取毒的价格
@@ -81,7 +78,7 @@ try:
                     sql_where = myFunc.selectSql(du.TABLE['sold'], {'articleNumber': v[2], 'size': size},
                                                  ['soldNum'])
                     cursor.execute(sql_where)
-                    ret_size = await cursor.fetchone()
+                    ret_size = cursor.fetchone()
                     if ret_size:
                         soldNum = ret_size[0]
                     else:
@@ -95,7 +92,7 @@ try:
                         'size': size,
                         'duPrice': du_price,
                         'soldNum': soldNum,
-                        'xSoldNum': v[11],
+                        'xSoldNum': v[10],
                         'stockxPrice': stockx_price,
                         'imageUrl': pymysql.escape_string(ret_product[0]),
                         'createTime': arrow.now().timestamp,
@@ -106,9 +103,10 @@ try:
                     row += 1
                     print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
     end_time = arrow.now().timestamp
-    logging.info("总耗时：", start_time - end_time)
+    msg = "开始时间：" + str(start_time) + "  结束时间: " + str(end_time) + "  总耗时：" + str(end_time - start_time)
+    print(msg)
+    logging.info(msg)
 
 except:
     logging.info(traceback.format_exc())
     traceback.print_exc()
-

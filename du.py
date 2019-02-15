@@ -43,6 +43,7 @@ TABLE = {
     'token': 'dollar',
     'dollar': 'dollar',
     'diff': 'diff',
+    'stockx': 'stockx_product_size',
 }
 # 商品爬取配置
 PRODUCT = {
