@@ -54,6 +54,7 @@ try:
                 'size': size,
             }, {}, 'spiderTime asc', 1)
 
+
             cursor.execute(sql_where)
             data = cursor.fetchone()
             if data:
