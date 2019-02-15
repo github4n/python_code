@@ -77,9 +77,10 @@ try:
                     cursor.execute(sql_where)
                     ret_product = cursor.fetchone()
                     # 查询这款鞋子在毒的销量
-                    sql_where = myFunc.selectSql(du.TABLE['sold'], {'articleNumber': v[2]}, ['soldNum'])
+                    sql_where = myFunc.selectSql(du.TABLE['sold'], {'articleNumber': v[2], 'size': size},
+                                                 ['soldNum'])
                     cursor.execute(sql_where)
-                    ret_size = cursor.fetchone()
+                    ret_size = await cursor.fetchone()
                     if ret_size:
                         soldNum = ret_size[0]
                     else:
