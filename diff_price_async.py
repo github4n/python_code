@@ -102,6 +102,7 @@ async def diff_size(pool, v, dollar):
                             'size': size,
                             'duPrice': du_price,
                             'soldNum': soldNum,
+                            'xSoldNum': v[11],
                             'stockxPrice': stockx_price,
                             'imageUrl': pymysql.escape_string(ret_product[0]),
                             'createTime': arrow.now().timestamp,

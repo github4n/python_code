@@ -33,6 +33,7 @@ dollar = cursor.fetchone()[0]
 sql = "SELECT * From stockx_product_size"
 cursor.execute(sql)
 rows = cursor.fetchall()
+start_time = arrow.now().timestamp
 try:
     for v in rows:
         # 去除size中的特殊符号
@@ -94,6 +95,7 @@ try:
                         'size': size,
                         'duPrice': du_price,
                         'soldNum': soldNum,
+                        'xSoldNum': v[11],
                         'stockxPrice': stockx_price,
                         'imageUrl': pymysql.escape_string(ret_product[0]),
                         'createTime': arrow.now().timestamp,
@@ -103,6 +105,9 @@ try:
                     cursor.execute(insert_sql)
                     row += 1
                     print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
+    end_time = arrow.now().timestamp
+    logging.info("总耗时：", start_time - end_time)
+
 except:
     logging.info(traceback.format_exc())
     traceback.print_exc()
