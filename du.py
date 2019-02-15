@@ -35,16 +35,7 @@ URL = {
     # 尺码
     'size': '/product/lastSoldList',
 }
-# 表设置
-TABLE = {
-    'product': 'product',
-    'sold': 'product_sold',
-    'size': 'product_size',
-    'token': 'dollar',
-    'dollar': 'dollar',
-    'diff': 'diff',
-    'stockx': 'stockx_product_size',
-}
+
 # 商品爬取配置
 PRODUCT = {
     'isSellDate': False,
@@ -67,7 +58,7 @@ def getToken(force=False):
 
     mysql_data = {}
     # 获取数据库token
-    sql = myFunc.selectSql(TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
+    sql = myFunc.selectSql(conf.TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
     cursor.execute(sql)
     ret_token = cursor.fetchone()
     # 都有数据的情况下  爬取时间不超三天则不重新登录
@@ -78,7 +69,7 @@ def getToken(force=False):
             mysql_data['token'] = ret_token[0]
 
     # 获取数据库cookie
-    sql = myFunc.selectSql(TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
+    sql = myFunc.selectSql(conf.TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
     cursor.execute(sql)
     ret_cookie = cursor.fetchone()
     # 都有数据的情况下  爬取时间不超三天则不重新登录
@@ -111,7 +102,7 @@ def getToken(force=False):
 
     # 设置cookie
     HEADERS['Cookie'] = ret.headers['Set-Cookie']
-    sql = myFunc.updateSql(TABLE['token'], {
+    sql = myFunc.updateSql(conf.TABLE['token'], {
         'val': HEADERS['Cookie'],
         'spiderTime': now_time,
     }, {'key': 'cookie'})
@@ -119,7 +110,7 @@ def getToken(force=False):
 
     # 设置用户登录token
     HEADERS['duloginToken'] = ret_data['data']['loginInfo']['loginToken']
-    sql = myFunc.updateSql(TABLE['token'], {
+    sql = myFunc.updateSql(conf.TABLE['token'], {
         'val': ret_data['data']['loginInfo']['loginToken'],
         'spiderTime': now_time,
     }, {'key': 'token'})
@@ -277,7 +268,7 @@ async def insert(pool, info_arr, sizeList):
                         return
 
                 # 查询数据是否已经存在
-                sql_where = myFunc.selectSql(TABLE['product'], {
+                sql_where = myFunc.selectSql(conf.TABLE['product'], {
                     'productId': info_arr['productId']
                 }, ['productId', 'soldNum'])
                 await cur.execute(sql_where)
@@ -285,7 +276,7 @@ async def insert(pool, info_arr, sizeList):
                 row = await cur.fetchone()
                 if row:
                     # 更新已有数据
-                    sql_update = myFunc.updateSql(TABLE['product'], {
+                    sql_update = myFunc.updateSql(conf.TABLE['product'], {
                         'authPrice': info_arr['authPrice'],
                         'soldNum': info_arr['soldNum'],
                         'updateTime': info_arr['spiderTime'],
@@ -294,7 +285,7 @@ async def insert(pool, info_arr, sizeList):
                 else:
                     # 添加商品
                     info_arr['updateTime'] = now_time
-                    sql_insert = myFunc.insertSql(TABLE['product'], info_arr)
+                    sql_insert = myFunc.insertSql(conf.TABLE['product'], info_arr)
                     await cur.execute(sql_insert)
 
                 # 记录鞋子的各类尺码
@@ -314,7 +305,7 @@ async def insertSize(pool, size_info):
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # 新增尺码数据
-                sql_insert = myFunc.insertSql(TABLE['size'], {
+                sql_insert = myFunc.insertSql(conf.TABLE['size'], {
                     'articleNumber': articleNumber,
                     'size': size_info['size'],
                     'formatSize': size_info['formatSize'],

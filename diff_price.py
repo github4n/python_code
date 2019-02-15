@@ -1,8 +1,7 @@
 import traceback
-import du
 import common.conf as conf
 import common.function as myFunc
-import pymysql, json, xlsxwriter, arrow, logging, asyncio, aiomysql
+import pymysql,  arrow, logging
 
 # 初始化excel
 # filename = '对比差价' + arrow.now().format('YYYY-MM-DD') + '.xlsx'
@@ -18,6 +17,7 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
 
 # 日志配置
 log_name = "log/diff.log"
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
@@ -28,7 +28,7 @@ cursor.execute(sql)
 sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
-sql = myFunc.selectSql(du.TABLE['stockx'], {"styleId": '555088-311'})
+sql = myFunc.selectSql(conf.TABLE['stockx'], {"styleId": '555088-311'})
 cursor.execute(sql)
 rows = cursor.fetchall()
 start_time = arrow.now().timestamp
@@ -71,11 +71,11 @@ try:
                 # 如果差价在100以上
                 if diff > 100 and stockx_price != 0:
                     # 获取毒的图片地址
-                    sql_where = myFunc.selectSql(du.TABLE['product'], {'articleNumber': v[2]}, ['logoUrl'])
+                    sql_where = myFunc.selectSql(conf.TABLE['product'], {'articleNumber': v[2]}, ['logoUrl'])
                     cursor.execute(sql_where)
                     ret_product = cursor.fetchone()
                     # 查询这款鞋子在毒的销量
-                    sql_where = myFunc.selectSql(du.TABLE['sold'], {'articleNumber': v[2], 'size': size},
+                    sql_where = myFunc.selectSql(conf.TABLE['sold'], {'articleNumber': v[2], 'size': size},
                                                  ['soldNum'])
                     cursor.execute(sql_where)
                     ret_size = cursor.fetchone()
@@ -108,5 +108,5 @@ try:
     logging.info(msg)
 
 except:
-    logging.info(traceback.format_exc())
+    logging.error(traceback.format_exc())
     traceback.print_exc()

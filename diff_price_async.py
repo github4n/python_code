@@ -18,18 +18,18 @@ async def diff(pool):
                 sql = 'TRUNCATE TABLE diff'
                 await cur.execute(sql)
                 # 获取美元汇率
-                sql = myFunc.selectSql(du.TABLE['dollar'], {'id': 1}, ['val'])
+                sql = myFunc.selectSql(conf.TABLE['dollar'], {'id': 1}, ['val'])
                 await cur.execute(sql)
                 ret_dollar = await cur.fetchone()
                 dollar = ret_dollar[0]
                 # 获取stockx的所有数据
-                sql = myFunc.selectSql(du.TABLE['stockx'], {"styleId": '555088-311'})
+                sql = myFunc.selectSql(conf.TABLE['stockx'], {"styleId": '555088-311'})
                 await cur.execute(sql)
                 rows = await cur.fetchall()
                 try:
                     for v in rows:
                         task2 = asyncio.create_task(diff_size(pool, v, dollar))
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(0.3)
 
                     done, pending = await asyncio.wait({task2})
 
@@ -65,7 +65,7 @@ async def diff_size(pool, v, dollar):
                     else:
                         size = 0
                     # 出现38码的情况
-                    sql_where = myFunc.selectSql(du.TABLE['size'], {
+                    sql_where = myFunc.selectSql(conf.TABLE['size'], {
                         'articleNumber': v[2],
                         'size': size,
                     }, {}, 'spiderTime desc', 1)
@@ -74,7 +74,7 @@ async def diff_size(pool, v, dollar):
                     data = await cur.fetchone()
                     if data:
                         # 获取毒商品的数据
-                        sql = myFunc.selectSql(du.TABLE['product'], {'articleNumber': v[2]}, ['title'])
+                        sql = myFunc.selectSql(conf.TABLE['product'], {'articleNumber': v[2]}, ['title'])
                         await cur.execute(sql)
                         product_info = await cur.fetchone()
                         # 毒的价格
@@ -86,11 +86,11 @@ async def diff_size(pool, v, dollar):
                         # 如果差价在100以上
                         if diff > 100 and stockx_price != 0:
                             # 获取毒的图片地址
-                            sql_where = myFunc.selectSql(du.TABLE['product'], {'articleNumber': v[2]}, ['logoUrl'])
+                            sql_where = myFunc.selectSql(conf.TABLE['product'], {'articleNumber': v[2]}, ['logoUrl'])
                             await cur.execute(sql_where)
                             ret_product = await cur.fetchone()
                             # 查询这款鞋子在毒的销量
-                            sql_where = myFunc.selectSql(du.TABLE['sold'], {'articleNumber': v[2], 'size': size},
+                            sql_where = myFunc.selectSql(conf.TABLE['sold'], {'articleNumber': v[2], 'size': size},
                                                          ['soldNum'])
                             await cur.execute(sql_where)
                             ret_size = await cur.fetchone()
@@ -113,7 +113,7 @@ async def diff_size(pool, v, dollar):
                                 'createTime': arrow.now().timestamp,
                                 'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
                             }
-                            insert_sql = myFunc.insertSql(du.TABLE['diff'], data)
+                            insert_sql = myFunc.insertSql(conf.TABLE['diff'], data)
                             await cur.execute(insert_sql)
                             print('货号: ', v[2], '名称：', v[1], ' size:', size, ' diff:', diff)
     except:
@@ -145,4 +145,4 @@ if __name__ == '__main__':
     end_time = arrow.now().timestamp
     msg = "开始时间：" + str(start_time) + "  结束时间: " + str(end_time) + "  总耗时：" + str(end_time - start_time)
     print(msg)
-    logging.info(msg)
+    logging.error(msg)
