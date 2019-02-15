@@ -52,7 +52,7 @@ try:
             sql_where = myFunc.selectSql('product_size', {
                 'articleNumber': v[2],
                 'size': size,
-            }, {}, 'spiderTime asc', 1)
+            }, {}, 'spiderTime desc', 1)
 
 
             cursor.execute(sql_where)
