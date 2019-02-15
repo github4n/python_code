@@ -68,7 +68,7 @@ async def diff_size(pool, v, dollar):
                     sql_where = myFunc.selectSql(conf.TABLE['size'], {
                         'articleNumber': v[2],
                         'size': size,
-                    }, {}, 'spiderTime desc', 1)
+                    }, {}, 'spiderTime asc', 1)
 
                     await cur.execute(sql_where)
                     data = await cur.fetchone()
