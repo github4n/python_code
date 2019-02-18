@@ -1,6 +1,6 @@
 import common.conf as conf
 import common.function as myFunc
-import aiohttp, asyncio, arrow, logging, aiomysql, traceback,pymysql
+import aiohttp, asyncio, arrow, logging, aiomysql, traceback, pymysql
 
 log_name = "log/stockx.log"
 
@@ -25,6 +25,8 @@ URL = {
     'highestBid': '/api/browse?order=DESC&productCategory=sneakers&sort=highest_bid&page=',
     'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
 }
+
+stockx_i = 0
 
 
 async def getData(url):
@@ -51,6 +53,7 @@ async def spiderList(pool, api_url):
         # 遍历商品列表获取详情
         for v in productList:
             asyncio.ensure_future(spiderDetail(pool, v['urlKey']))
+
     except:
         traceback.print_exc()
         logging.error("[爬取列表] error:" + traceback.format_exc())
@@ -125,6 +128,8 @@ async def spiderInsert(pool, info_arr):
                         await cur.execute(sql_update)
 
                         logging.info("[修改尺码] " + sql_update)
+                    else:
+                        logging.info("[已经爬取过]")
                 else:
                     # 添加尺码
                     sql_insert = myFunc.insertSql(table_name, info_arr)
@@ -146,7 +151,8 @@ async def main(loop):
         for page in range(30):
             api_url = DOMAIN + v + str(page)
             task = asyncio.create_task(spiderList(pool, api_url))
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
+        await asyncio.sleep(5*60)
 
     done, pending = await asyncio.wait({task})
     if task in done:

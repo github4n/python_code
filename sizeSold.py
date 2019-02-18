@@ -1,12 +1,9 @@
 import du
 import common.conf as conf
-import arrow, logging
+import arrow, logging as logging_size
 
 now_time = arrow.now().timestamp
-# 日志配置
-log_name = "log/sizeSold.log"
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+
 
 
 # 统计数组中各个元素出现的次数
@@ -81,7 +78,7 @@ async def getSizeSoldNum(pool, client, productInfo):
                         du.asyncio.ensure_future(insertSizeSold(pool, data))
 
     except:
-        logging.error("[尺码销量] error!:" + str(du.traceback.format_exc()))
+        logging_size.error("[尺码销量] error!:" + str(du.traceback.format_exc()))
         du.traceback.print_exc()
 
 
@@ -106,16 +103,19 @@ async def insertSizeSold(pool, data):
                             'updateTime': data['updateTime'],
                         }, {'articleNumber': data['articleNumber'], 'size': data['size']})
                         await cur.execute(sql)
+                        msg = "articleNumber:" + str(data['articleNumber']) + ' size: ' + str(
+                            data['size']) + ' soldNum:' + str(row[0]) + " add: +" + str(data['soldNum'])
+                        print(msg)
+                        logging_size.info(msg)
 
-                        print("articleNumber:", data['articleNumber'], ' size: ', data['size'], 'soldNum:', row[0],
-                              " add: +", data['soldNum'])
                 else:
                     sql = du.myFunc.insertSql(conf.TABLE['sold'], data)
                     await cur.execute(sql)
 
-                    print("insert:", 'articleNumber:', data['articleNumber'], ' size:', data['size'], ' soldNum:', data['soldNum'])
+                    print("insert:", 'articleNumber:', data['articleNumber'], ' size:', data['size'], ' soldNum:',
+                          data['soldNum'])
     except:
-        logging.error("[插入尺码销量] error!:" + str(du.traceback.format_exc()))
+        logging_size.error("[插入尺码销量] error!:" + str(du.traceback.format_exc()))
         du.traceback.print_exc()
 
 
@@ -139,9 +139,9 @@ async def getAllList(pool, client):
 
                 if task in done:
                     print('[主程2]所有商品列表size统计完毕')
-                    logging.info("[主程2]所有商品列表size统计完毕")
+                    logging_size.info("[主程2]所有商品列表size统计完毕")
     except:
-        logging.error("[爬取详情] error!:" + str(du.traceback.format_exc()))
+        logging_size.error("[爬取详情] error!:" + str(du.traceback.format_exc()))
         du.traceback.print_exc()
 
 
@@ -159,10 +159,15 @@ async def main(loop):
 
         if task in done:
             print('[主程]所有商品列表size统计完毕')
-            logging.info("[主程]所有商品列表size统计完毕")
+            logging_size.info("[主程]所有商品列表size统计完毕")
 
 
 if __name__ == '__main__':
+    # 日志配置
+    log_name = "log/sizeSold.log"
+    logging_size.basicConfig(level=logging_size.DEBUG,
+                             format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                             datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
     # 获取用户token
     du.getToken()
 
