@@ -1,4 +1,5 @@
 import du
+import common.conf as conf
 import arrow, logging
 
 now_time = arrow.now().timestamp
@@ -32,7 +33,7 @@ async def getSizeSoldNum(pool, client, productInfo):
                 res = await du.fetch(client, url)
 
                 # 获取数据库中尺码销量 上次爬取时间
-                sql = du.myFunc.selectSql(du.TABLE['sold'], {'productId': productId}, ['updateTime'])
+                sql = du.myFunc.selectSql(conf.TABLE['sold'], {'productId': productId}, ['updateTime'])
                 await cur.execute(sql)
                 ret_size = await cur.fetchone()
                 if ret_size:
@@ -90,7 +91,7 @@ async def insertSizeSold(pool, data):
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
                 # 判断数据是否已经存在
-                sql = du.myFunc.selectSql(du.TABLE['sold'], {
+                sql = du.myFunc.selectSql(conf.TABLE['sold'], {
                     'articleNumber': data['articleNumber'],
                     'size': data['size']
                 }, ['soldNum'])
@@ -100,7 +101,7 @@ async def insertSizeSold(pool, data):
                     # 加上原来爬取的数量
                     if data['soldNum'] > 0:
                         sold = row[0] + data['soldNum']
-                        sql = du.myFunc.updateSql(du.TABLE['sold'], {
+                        sql = du.myFunc.updateSql(conf.TABLE['sold'], {
                             'soldNum': sold,
                             'updateTime': data['updateTime'],
                         }, {'articleNumber': data['articleNumber'], 'size': data['size']})
@@ -109,7 +110,7 @@ async def insertSizeSold(pool, data):
                         print("articleNumber:", data['articleNumber'], ' size: ', data['size'], 'soldNum:', row[0],
                               " add: +", data['soldNum'])
                 else:
-                    sql = du.myFunc.insertSql(du.TABLE['sold'], data)
+                    sql = du.myFunc.insertSql(conf.TABLE['sold'], data)
                     await cur.execute(sql)
 
                     print("insert:", 'articleNumber:', data['articleNumber'], ' size:', data['size'], ' soldNum:', data['soldNum'])
@@ -146,9 +147,9 @@ async def getAllList(pool, client):
 
 async def main(loop):
     # 等待mysql连接好
-    pool = await du.aiomysql.create_pool(host=du.conf.database['host'], port=du.conf.database['port'],
-                                         user=du.conf.database['user'], password=du.conf.database['passwd'],
-                                         db=du.conf.database['db'], loop=loop)
+    pool = await du.aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
+                                         user=conf.database['user'], password=conf.database['passwd'],
+                                         db=conf.database['db'], loop=loop)
 
     # 建立 client request
     async with du.aiohttp.ClientSession() as client:

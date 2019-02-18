@@ -2,7 +2,7 @@ import common.conf as conf
 import common.function as myFunc
 import aiohttp, asyncio, arrow, logging, aiomysql, traceback,pymysql
 
-log_name = "log/du_product_log.log"
+log_name = "log/stockx.log"
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
@@ -59,14 +59,10 @@ async def spiderList(pool, api_url):
 # 遍历商品列表获取详情
 async def spiderDetail(pool, urlKey):
     try:
-        logging.info("[爬取详情] product:" + str(urlKey))
-
         url = 'https://stockx.com/api/products/' + str(urlKey) + '?includes=market,360&currency=USD'
         product_detail = await getData(url)
 
         # 插入对象赋值
-        if 'children' not in product_detail['Product']:
-            return
         size_list = product_detail['Product']['children']
         for v in size_list:
             if 'styleId' in size_list[v]:
