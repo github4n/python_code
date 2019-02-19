@@ -46,85 +46,105 @@ now_time = arrow.now().timestamp
 
 # 登录状态测试
 def tokenTest():
-    url = getApiUrl(URL['detail'], {
-        'productId': str(9670),
-        'isChest': str(0),
-    })
+    i = 1
+    while i <= 3:
+        try:
+            url = getApiUrl(URL['detail'], {
+                'productId': str(9670),
+                'isChest': str(0),
+            })
 
-    # 等待返回结果
-    data = requests.get(url, headers=HEADERS)
-    data = data.json()
-    if data['status'] == 700:
-        msg = "登录已失效 需要重新登录！"
-        print(msg)
-        logging.info(msg)
-        getToken(True)
+            # 等待返回结果
+            data = requests.get(url, headers=HEADERS)
+            data = data.json()
+            if data['status'] == 700:
+                msg = "登录已失效 需要重新登录！"
+                print(msg)
+                logging.info(msg)
+                getToken(True)
+            else:
+                msg = "保持登录！"
+                print(msg)
+                logging.info(msg)
+
+            return
+        except:
+            time.sleep(5)
+            print("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
+            logging.error("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
+            i += 1
+
 
 
 # 获取用户登录的token
 def getToken(force=False):
-    db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
-                         user=conf.database['user'], password=conf.database['passwd'],
-                         db=conf.database['db'], charset='utf8')
-    cursor = db.cursor()
+    try:
+        db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
+                             user=conf.database['user'], password=conf.database['passwd'],
+                             db=conf.database['db'], charset='utf8')
+        cursor = db.cursor()
 
-    mysql_data = {}
-    # 获取数据库token
-    sql = myFunc.selectSql(conf.TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
-    cursor.execute(sql)
-    ret_token = cursor.fetchone()
-    # 都有数据的情况下  爬取时间不超三天则不重新登录
-    if not (ret_token[1] is None) and not (ret_token[0] is None):
-        mysql_data['token'] = ret_token[0]
+        mysql_data = {}
+        # 获取数据库token
+        sql = myFunc.selectSql(conf.TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
+        cursor.execute(sql)
+        ret_token = cursor.fetchone()
+        # 都有数据的情况下  爬取时间不超三天则不重新登录
+        if not (ret_token[1] is None) and not (ret_token[0] is None):
+            mysql_data['token'] = ret_token[0]
 
-    # 获取数据库cookie
-    sql = myFunc.selectSql(conf.TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
-    cursor.execute(sql)
-    ret_cookie = cursor.fetchone()
-    # 都有数据的情况下  爬取时间不超三天则不重新登录
-    if not (ret_cookie[1] is None) and not (ret_cookie[0] is None):
-        mysql_data['cookie'] = ret_cookie[0]
+        # 获取数据库cookie
+        sql = myFunc.selectSql(conf.TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
+        cursor.execute(sql)
+        ret_cookie = cursor.fetchone()
+        # 都有数据的情况下  爬取时间不超三天则不重新登录
+        if not (ret_cookie[1] is None) and not (ret_cookie[0] is None):
+            mysql_data['cookie'] = ret_cookie[0]
 
-    if 'token' in mysql_data and 'cookie' in mysql_data and not force:
-        HEADERS['duloginToken'] = mysql_data['token']
-        HEADERS['Cookie'] = mysql_data['cookie']
-        print('获取数据库 token，cookie')
-        return
+        if 'token' in mysql_data and 'cookie' in mysql_data and not force:
+            HEADERS['duloginToken'] = mysql_data['token']
+            HEADERS['Cookie'] = mysql_data['cookie']
+            print('获取数据库 token，cookie')
+            return
 
-    # 重置
-    HEADERS['Cookie'] = ''
-    HEADERS['duloginToken'] = ''
-    # 重新登录
-    ret = requests.post(URL['domain'] + URL['login'], data=USER, headers=HEADERS)
+        # 重置
+        HEADERS['Cookie'] = ''
+        HEADERS['duloginToken'] = ''
+        # 重新登录
+        ret = requests.post(URL['domain'] + URL['login'], data=USER, headers=HEADERS)
 
-    if ret.status_code != 200:
-        print("获取用户token失败")
-        return
+        if ret.status_code != 200:
+            print("获取用户token失败")
+            return
 
-    ret_data = ret.json()
-    if ret_data['status'] != 200:
-        print(ret_data['msg'])
-        return
+        ret_data = ret.json()
+        if ret_data['status'] != 200:
+            print(ret_data['msg'])
+            return
 
-    # 设置cookie
-    HEADERS['Cookie'] = ret.headers['Set-Cookie']
-    sql = myFunc.updateSql(conf.TABLE['token'], {
-        'val': HEADERS['Cookie'],
-        'spiderTime': now_time,
-    }, {'key': 'cookie'})
-    cursor.execute(sql)
+        # 设置cookie
+        HEADERS['Cookie'] = ret.headers['Set-Cookie']
+        sql = myFunc.updateSql(conf.TABLE['token'], {
+            'val': HEADERS['Cookie'],
+            'spiderTime': now_time,
+        }, {'key': 'cookie'})
+        cursor.execute(sql)
 
-    # 设置用户登录token
-    HEADERS['duloginToken'] = ret_data['data']['loginInfo']['loginToken']
-    sql = myFunc.updateSql(conf.TABLE['token'], {
-        'val': ret_data['data']['loginInfo']['loginToken'],
-        'spiderTime': now_time,
-    }, {'key': 'token'})
-    cursor.execute(sql)
-    db.close()
-    msg = "重新登录！"
-    print(msg)
-    logging.info(msg)
+        # 设置用户登录token
+        HEADERS['duloginToken'] = ret_data['data']['loginInfo']['loginToken']
+        sql = myFunc.updateSql(conf.TABLE['token'], {
+            'val': ret_data['data']['loginInfo']['loginToken'],
+            'spiderTime': now_time,
+        }, {'key': 'token'})
+        cursor.execute(sql)
+        db.close()
+
+        msg = "重新登录！"
+        print(msg)
+        logging.info(msg)
+    except:
+        traceback.print_exc()
+        logging.error(traceback.format_exc())
 
 
 # 获取签名p
