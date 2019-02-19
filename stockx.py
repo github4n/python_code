@@ -26,8 +26,6 @@ URL = {
     'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
 }
 
-stockx_i = 0
-
 
 async def getData(url):
     try:
@@ -37,6 +35,7 @@ async def getData(url):
                     print('URL: ', url)
                     ret_json = await resp.json()
                     return ret_json
+
 
     except:
         print('[ERROR] URL: ', url)
@@ -109,6 +108,7 @@ async def spiderInsert(pool, info_arr):
                 # SQL 查询语句 判断是否存在
                 await cur.execute(sql_where)
                 row = await cur.fetchone()
+
                 if row:
                     if row[9]:
                         update_time = row[9]
@@ -151,8 +151,8 @@ async def main(loop):
         for page in range(30):
             api_url = DOMAIN + v + str(page)
             task = asyncio.create_task(spiderList(pool, api_url))
-            await asyncio.sleep(10)
-        await asyncio.sleep(5*60)
+            await asyncio.sleep(20 * 5)
+        await asyncio.sleep(3000)
 
     done, pending = await asyncio.wait({task})
     if task in done:
