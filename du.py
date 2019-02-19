@@ -44,6 +44,21 @@ PRODUCT = {
 # 当前时间设置
 now_time = arrow.now().timestamp
 
+# 登录状态测试
+def tokenTest():
+    url = getApiUrl(URL['detail'], {
+        'productId': str(9670),
+        'isChest': str(0),
+    })
+
+    # 等待返回结果
+    data = requests.get(url, headers=HEADERS)
+    data = data.json()
+    if data['status'] == 700:
+        msg = "登录已失效 需要重新登录！"
+        print(msg)
+        logging.info(msg)
+        getToken(True)
 
 
 # 获取用户登录的token
@@ -60,10 +75,7 @@ def getToken(force=False):
     ret_token = cursor.fetchone()
     # 都有数据的情况下  爬取时间不超三天则不重新登录
     if not (ret_token[1] is None) and not (ret_token[0] is None):
-        diff_time = arrow.now().timestamp - ret_token[1]
-        # 爬取时间大于三天重新获取
-        if diff_time <= (3600 * 24 * 3):
-            mysql_data['token'] = ret_token[0]
+        mysql_data['token'] = ret_token[0]
 
     # 获取数据库cookie
     sql = myFunc.selectSql(conf.TABLE['token'], {'id': 3}, ['val', 'spiderTime'])
@@ -71,10 +83,7 @@ def getToken(force=False):
     ret_cookie = cursor.fetchone()
     # 都有数据的情况下  爬取时间不超三天则不重新登录
     if not (ret_cookie[1] is None) and not (ret_cookie[0] is None):
-        diff_time = arrow.now().timestamp - ret_cookie[1]
-        # 爬取时间大于三天重新获取
-        if diff_time <= (3600 * 24 * 3):
-            mysql_data['cookie'] = ret_cookie[0]
+        mysql_data['cookie'] = ret_cookie[0]
 
     if 'token' in mysql_data and 'cookie' in mysql_data and not force:
         HEADERS['duloginToken'] = mysql_data['token']
@@ -113,7 +122,9 @@ def getToken(force=False):
     }, {'key': 'token'})
     cursor.execute(sql)
     db.close()
-    print('重新登录')
+    msg = "重新登录！"
+    print(msg)
+    logging.info(msg)
 
 
 # 获取签名p
@@ -250,9 +261,6 @@ async def getDetail(pool, client, productId):
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
-
-
-
 async def insert(pool, info_arr, sizeList):
     try:
 
@@ -336,6 +344,7 @@ async def main(loop):
 
 if __name__ == '__main__':
     getToken()
+    tokenTest()
 
     # 日志配置
     log_name = "log/du.log"
