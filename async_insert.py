@@ -2,6 +2,12 @@ import common.conf as conf
 from redis_queue import RedisQueue
 import time, pymysql, logging, arrow, traceback
 
+# 日志配置
+log_name = "log/async_insert.log"
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+
 # 链接数据库
 db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
