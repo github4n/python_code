@@ -29,3 +29,4 @@ test_appmuin.py
 du_product2.py
 du_product.py
 styleId.txt
+__pycache__/

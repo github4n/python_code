@@ -1,6 +1,7 @@
 import common.conf as conf
 import common.function as myFunc
 import aiohttp, asyncio, arrow, logging, aiomysql, traceback, pymysql
+from redis_queue import RedisQueue
 
 log_name = "log/stockx.log"
 
@@ -43,7 +44,7 @@ async def getData(url):
         logging.error("[爬取错误]" + traceback.format_exc())
 
 
-async def spiderList(pool, api_url):
+async def spiderList(pool, api_url, q):
     try:
         # 等待返回结果
         data = await getData(api_url)
@@ -51,7 +52,7 @@ async def spiderList(pool, api_url):
 
         # 遍历商品列表获取详情
         for v in productList:
-            asyncio.ensure_future(spiderDetail(pool, v['urlKey']))
+            asyncio.ensure_future(spiderDetail(pool, v['urlKey'], q))
 
     except:
         traceback.print_exc()
@@ -59,10 +60,13 @@ async def spiderList(pool, api_url):
 
 
 # 遍历商品列表获取详情
-async def spiderDetail(pool, urlKey):
+async def spiderDetail(pool, urlKey, q):
     try:
         url = 'https://stockx.com/api/products/' + str(urlKey) + '?includes=market,360&currency=USD'
         product_detail = await getData(url)
+
+        if 'Product' not in product_detail or 'children' not in product_detail['Product']:
+            return
 
         # 插入对象赋值
         size_list = product_detail['Product']['children']
@@ -90,14 +94,14 @@ async def spiderDetail(pool, urlKey):
                 else:
                     info_arr['deadstockSold'] = 0
                 # 等待插入
-                asyncio.ensure_future(spiderInsert(pool, info_arr))
+                asyncio.ensure_future(spiderInsert(pool, info_arr, q))
     except:
         traceback.print_exc()
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
 # 插入操作
-async def spiderInsert(pool, info_arr):
+async def spiderInsert(pool, info_arr, q):
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -125,7 +129,10 @@ async def spiderInsert(pool, info_arr):
                             'lowestAsk': info_arr['lowestAsk'],
                             'updateTime': now_time,
                         }, {'styleId': info_arr['styleId'], 'shoeSize': info_arr['shoeSize']})
-                        await cur.execute(sql_update)
+                        q.put(sql_update)
+                        print(sql_update)
+
+                        # await cur.execute(sql_update)
 
                         logging.info("[修改尺码] " + sql_update)
                     else:
@@ -133,7 +140,10 @@ async def spiderInsert(pool, info_arr):
                 else:
                     # 添加尺码
                     sql_insert = myFunc.insertSql(table_name, info_arr)
-                    await cur.execute(sql_insert)
+                    q.put(sql_insert)
+                    print(sql_insert)
+
+                    # await cur.execute(sql_insert)
                     logging.info("[添加尺码] " + sql_insert)
 
     except:
@@ -147,12 +157,14 @@ async def main(loop):
     pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
                                       user=conf.database['user'], password=conf.database['passwd'],
                                       db=conf.database['db'], loop=loop)
+
+    q = RedisQueue('rq')
+
     for k, v in URL.items():
         for page in range(30):
             api_url = DOMAIN + v + str(page)
-            task = asyncio.create_task(spiderList(pool, api_url))
-            await asyncio.sleep(20 * 5)
-        await asyncio.sleep(3000)
+            task = asyncio.create_task(spiderList(pool, api_url, q))
+            await asyncio.sleep(20)
 
     done, pending = await asyncio.wait({task})
     if task in done:
