@@ -44,6 +44,7 @@ PRODUCT = {
 # 当前时间设置
 now_time = arrow.now().timestamp
 
+
 # 登录状态测试
 def tokenTest():
     i = 1
@@ -73,7 +74,6 @@ def tokenTest():
             print("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
             logging.error("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
             i += 1
-
 
 
 # 获取用户登录的token
@@ -363,16 +363,19 @@ async def main(loop):
 
 
 if __name__ == '__main__':
-    getToken()
-    tokenTest()
+    try:
+        # 获取用户token
+        getToken()
+        tokenTest()
 
-    # 日志配置
-    log_name = "log/du.log"
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                        datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
-    # 获取用户token
+        # 日志配置
+        log_name = "log/du.log"
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                            datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
-    loop = asyncio.get_event_loop()
-    task = asyncio.ensure_future(main(loop))
-    loop.run_until_complete(task)
+        loop = asyncio.get_event_loop()
+        task = asyncio.ensure_future(main(loop))
+        loop.run_until_complete(task)
+    except:
+        logging.error(traceback.format_exc())

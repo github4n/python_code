@@ -27,21 +27,23 @@ URL = {
     'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
 }
 
+sem = asyncio.Semaphore(500)
 
 async def getData(url):
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=conf.headers, timeout=60) as resp:
-                if resp.status == 200:
-                    print('URL: ', url)
-                    ret_json = await resp.json()
-                    return ret_json
+    async with sem:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=conf.headers, timeout=60) as resp:
+                    if resp.status == 200:
+                        print('URL: ', url)
+                        ret_json = await resp.json()
+                        return ret_json
 
 
-    except:
-        print('[ERROR] URL: ', url)
-        traceback.print_exc()
-        logging.error("[爬取错误]" + traceback.format_exc())
+        except:
+            print('[ERROR] URL: ', url)
+            traceback.print_exc()
+            logging.error("[爬取错误]" + traceback.format_exc())
 
 
 async def spiderList(pool, api_url, q):
@@ -134,7 +136,6 @@ async def spiderInsert(pool, info_arr, q):
 
                         # await cur.execute(sql_update)
 
-                        logging.info("[修改尺码] " + sql_update)
                     else:
                         logging.info("[已经爬取过]")
                 else:
@@ -144,7 +145,6 @@ async def spiderInsert(pool, info_arr, q):
                     print(sql_insert)
 
                     # await cur.execute(sql_insert)
-                    logging.info("[添加尺码] " + sql_insert)
 
     except:
         traceback.print_exc()
@@ -164,7 +164,7 @@ async def main(loop):
         for page in range(30):
             api_url = DOMAIN + v + str(page)
             task = asyncio.create_task(spiderList(pool, api_url, q))
-            await asyncio.sleep(20)
+            await asyncio.sleep(1)
 
     done, pending = await asyncio.wait({task})
     if task in done:

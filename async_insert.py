@@ -23,7 +23,7 @@ timeout = 0
 start_time = arrow.now().timestamp
 
 try:
-    while 1:
+    while True:
         if timeout == 180:
             msg = "超时 3 分钟 队列结束"
             logging.info(msg)
@@ -43,10 +43,8 @@ try:
 
             msg = "第 " + str(sum) + " 条 SQL 正在执行: " + str(result)
             print(msg)
-            logging.info(msg)
             msg = "剩余队列： " + str(q.qsize())
             print(msg)
-            logging.info(msg)
 
             cur.execute(result)
 except:
