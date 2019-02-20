@@ -163,6 +163,8 @@ async def main(loop):
 
 
 if __name__ == '__main__':
+    start_time = arrow.now().timestamp
+
     # 日志配置
     log_name = "log/sizeSold.log"
     logging_size.basicConfig(level=logging_size.DEBUG,
@@ -174,3 +176,13 @@ if __name__ == '__main__':
     loop = du.asyncio.get_event_loop()
     task = du.asyncio.ensure_future(main(loop))
     loop.run_until_complete(task)
+
+    end_time = arrow.now().timestamp
+    use_time = end_time - start_time
+
+    msg = '总耗时: ' + str(use_time) + " 开始时间: " + str(
+        arrow.get(start_time).format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(
+        arrow.get(end_time).format('YYYY-MM-DD HH:mm:ss'))
+    print(msg)
+    logging_size.info(msg)
+

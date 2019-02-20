@@ -5,7 +5,6 @@ import common.conf as conf
 import common.function as myFunc
 import hashlib
 import arrow
-import pymysql
 import requests, traceback
 import aiohttp, asyncio, aiomysql, pymysql
 
@@ -43,6 +42,8 @@ PRODUCT = {
 }
 # 当前时间设置
 now_time = arrow.now().timestamp
+
+sem = asyncio.Semaphore(conf.async_num)
 
 
 # 登录状态测试
@@ -194,24 +195,25 @@ def getApiUrl(api_url, api_params):
 
 # 组装最终访问链接
 async def fetch(client, url):
-    i = 1
-    while i <= 3:
-        try:
-            async with client.get(url, headers=HEADERS, timeout=30) as res:
-                assert res.status == 200
-                # <coroutine object ClientResponse.text at 0x109b8ddb0>
-                # 要获取HTML页面的内容, 必须在 resp.json() 前面使用 await
-                res_json = await res.json()
-                if res_json['status'] != 200:
-                    print(res_json)
-                    return
-                print('URL: ', url)
-                return res_json
-        except:
-            time.sleep(5)
-            print("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
-            logging.error("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
-            i += 1
+    async with sem:
+        i = 1
+        while i <= 3:
+            try:
+                async with client.get(url, headers=HEADERS, timeout=30) as res:
+                    assert res.status == 200
+                    # <coroutine object ClientResponse.text at 0x109b8ddb0>
+                    # 要获取HTML页面的内容, 必须在 resp.json() 前面使用 await
+                    res_json = await res.json()
+                    if res_json['status'] != 200:
+                        print(res_json)
+                        return
+                    print('URL: ', url)
+                    return res_json
+            except:
+                time.sleep(5)
+                print("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
+                logging.error("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
+                i += 1
 
 
 # 获取列表
@@ -363,6 +365,8 @@ async def main(loop):
 
 
 if __name__ == '__main__':
+    start_time = arrow.now().timestamp
+
     try:
         # 获取用户token
         getToken()
@@ -379,3 +383,12 @@ if __name__ == '__main__':
         loop.run_until_complete(task)
     except:
         logging.error(traceback.format_exc())
+
+    end_time = arrow.now().timestamp
+    use_time = end_time - start_time
+
+    msg = '总耗时: ' + str(use_time) + " 开始时间: " + str(
+        arrow.get(start_time).format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(
+        arrow.get(end_time).format('YYYY-MM-DD HH:mm:ss'))
+    print(msg)
+    logging.info(msg)
