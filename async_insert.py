@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.DEBUG,
 db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
                      db=conf.database['db'], charset='utf8')
-
 cur = db.cursor()
 
 q = RedisQueue('rq')
@@ -54,6 +53,6 @@ except:
 end_time = arrow.now().timestamp
 use_time = end_time - start_time
 
-msg = "总执行：" + str(sum) + '条  总耗时: ' + str(use_time)
+msg = "总执行：" + str(sum) + '条  总耗时: ' + str(use_time) + " 开始时间: " + str(arrow.get(start_time).format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(arrow.get(end_time).format('YYYY-MM-DD HH:mm:ss'))
 print(msg)
 logging.info(msg)
