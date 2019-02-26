@@ -6,7 +6,7 @@ import common.function as myFunc
 import hashlib
 import arrow
 import requests, traceback
-import aiohttp, asyncio, aiomysql, pymysql
+import aiohttp, asyncio, aiomysql, pymysql, pymongo
 
 # header头设置
 HEADERS = {
@@ -45,6 +45,14 @@ now_time = arrow.now().timestamp
 
 sem = asyncio.Semaphore(conf.async_num)
 
+# 连接mongodb
+myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+mydb = myclient["du"]
+db_product = mydb["du_product"]
+db_size = mydb["du_size"]
+db_sold = mydb['du_sold']
+db_sold_record = mydb['du_sold_record']
+
 
 # 登录状态测试
 def tokenTest():
@@ -72,8 +80,8 @@ def tokenTest():
             return
         except:
             time.sleep(5)
-            print("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
-            logging.error("[登录状态测试] 第 " + str(i) + ' 尝试重连URL:' + url)
+            print("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
+            logging.error("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
             i += 1
 
 
@@ -210,14 +218,16 @@ async def fetch(client, url):
                     print('URL: ', url)
                     return res_json
             except:
-                time.sleep(5)
+                await asyncio.sleep(5)
                 print("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
                 logging.error("[尝试重连] 第 " + str(i) + ' 尝试重连URL:' + url)
                 i += 1
+        logging.error('[尝试重连] 失败！ URL:' + url)
+        return False
 
 
 # 获取列表
-async def getList(pool, client, page):
+async def getList(client, page):
     try:
         url = getApiUrl(URL['list'], {
             "size": "[]",
@@ -233,6 +243,9 @@ async def getList(pool, client, page):
 
         # 等待返回结果
         data = await fetch(client, url)
+        if not data:
+            return
+
         productList = data['data']['productList']
 
         # 如果商品列表为空不再爬取
@@ -240,14 +253,14 @@ async def getList(pool, client, page):
             return
 
         for v in productList:
-            asyncio.ensure_future(getDetail(pool, client, v['product']['productId']))
+            asyncio.ensure_future(getDetail(client, v['product']['productId']))
     except:
         traceback.print_exc()
         logging.error("[爬取列表] error:" + traceback.format_exc())
 
 
 # 获取商品详情
-async def getDetail(pool, client, productId):
+async def getDetail(client, productId):
     try:
 
         url = getApiUrl(URL['detail'], {
@@ -255,132 +268,149 @@ async def getDetail(pool, client, productId):
             'isChest': str(0),
         })
         ret_data = await fetch(client, url)
+        if not ret_data:
+            return
 
         # 插入对象赋值
         info = ret_data['data']
         info_arr = {
+            'articleNumber': info['detail']['articleNumber'],
             'productId': info['detail']['productId'],
             'authPrice': str(info['detail']['authPrice']),
-            'brandId': info['detail']['brandId'],
-            'typeId': info['detail']['typeId'],
             'logoUrl': pymysql.escape_string(info['detail']['logoUrl']),
             'title': pymysql.escape_string(info['detail']['title']),
             'soldNum': info['detail']['soldNum'],
             'sellDate': info['detail']['sellDate'],
-            'sizeList': info['detail']['sellDate'],
-            'color': pymysql.escape_string(info['detail']['color']),
-            'rapidlyExpressTips': pymysql.escape_string(info['rapidlyExpressTips']),
-            'exchangeDesc': pymysql.escape_string(info['exchangeDesc']),
-            'dispatchName': pymysql.escape_string(info['dispatchName']),
-            'articleNumber': info['detail']['articleNumber'],
             'spiderTime': now_time,
+            'updateTime': now_time,
         }
 
-        asyncio.ensure_future(insert(pool, info_arr, info['sizeList']))
+        asyncio.ensure_future(insert(info_arr, info['sizeList']))
 
     except:
         traceback.print_exc()
         logging.error("[爬取详情] error!:" + str(traceback.format_exc()))
 
 
-async def insert(pool, info_arr, sizeList):
+async def insert(info_arr, sizeList):
     try:
+        # 只记录2018年的新款商品
+        # if PRODUCT['isSellDate']:
+        #     if str(info_arr['sellDate'][0:4]) != '2018':
+        #         return
 
-        # 链接数据库  获取数据库游标
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                # 只记录2018年的新款商品
-                if PRODUCT['isSellDate']:
-                    if str(info_arr['sellDate'][0:4]) != '2018':
-                        return
+        where = {'articleNumber': info_arr['articleNumber']}
+        ret = db_product.find_one(where)
+        print(ret)
 
-                # 查询数据是否已经存在
-                sql_where = myFunc.selectSql(conf.TABLE['product'], {
-                    'productId': info_arr['productId']
-                }, ['productId', 'soldNum'])
-                await cur.execute(sql_where)
+        if ret is not None:
+            is_spider = arrow.now().floor('day').timestamp - ret['updateTime']
+            # 判断今天是否已经爬取过   今日凌晨时间-爬取时间 < 0 则未爬取过
+            if is_spider < 0:
+                print("[今日已爬取]：", info_arr['articleNumber'])
+                return
 
-                row = await cur.fetchone()
-                if row:
-                    # 更新已有数据
-                    sql_update = myFunc.updateSql(conf.TABLE['product'], {
-                        'authPrice': info_arr['authPrice'],
-                        'soldNum': info_arr['soldNum'],
-                        'updateTime': info_arr['spiderTime'],
-                    }, {'articleNumber': info_arr['articleNumber']})
-                    await cur.execute(sql_update)
-                else:
-                    # 添加商品
-                    info_arr['updateTime'] = now_time
-                    sql_insert = myFunc.insertSql(conf.TABLE['product'], info_arr)
-                    await cur.execute(sql_insert)
+            ret_edit = db_product.update_one(where, {'$set': {
+                'authPrice': info_arr['authPrice'],
+                'soldNum': info_arr['soldNum'],
+                'updateTime': info_arr['spiderTime'],
+            }})
+            if ret_edit.modified_count == 1:
+                print("[修改成功]：", info_arr['articleNumber'])
+            else:
+                print("没有任何修改")
 
-                # 记录鞋子的各类尺码
-                for v in sizeList:
-                    if 'price' in v['item'] and v['item']['price'] != 0:
-                        asyncio.ensure_future(insertSize(pool, v))
+        else:
+            # 添加商品
+            ret_add = db_product.insert_one(info_arr)
+
+            msg = [info_arr['articleNumber']]
+            if ret_add:
+                print("[插入成功]：", " ".join('%s' % id for id in msg))
+            else:
+                print("[插入失败]：", " ".join('%s' % id for id in msg))
+
+        # 记录鞋子的各类尺码
+        size_arr = []
+        for v in sizeList:
+            if 'price' in v['item'] and v['item']['price'] != 0:
+                size_arr.append({
+                    'articleNumber': v['item']['product']['articleNumber'],
+                    'size': v['size'],
+                    'formatSize': v['formatSize'],
+                    'price': v['item']['price'],
+                    'spiderTime': now_time,
+                })
+
+        asyncio.ensure_future(insertSize(size_arr))
+
     except:
         traceback.print_exc()
         logging.error("[插入商品] error!:" + str(traceback.format_exc()))
 
 
 # 记录尺码信息
-async def insertSize(pool, size_info):
+async def insertSize(size_arr):
     try:
-        articleNumber = size_info['item']['product']['articleNumber']
-        # 链接数据库  获取数据库游标
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                # 新增尺码数据
-                sql_insert = myFunc.insertSql(conf.TABLE['size'], {
-                    'articleNumber': articleNumber,
-                    'size': size_info['size'],
-                    'formatSize': size_info['formatSize'],
-                    'price': size_info['item']['price'],
-                    'spiderTime': now_time,
-                })
-                await cur.execute(sql_insert)
+        if not size_arr:
+            print("尺码信息为空")
+            return
+
+        ret_add = db_size.insert_many(size_arr)
+
+        if ret_add:
+            print('[插入尺码成功]：', size_arr['articleNumber'], ' size:', size_arr['size'])
+        else:
+            print('[插入尺码失败]：', size_arr['articleNumber'], ' size:', size_arr['size'])
     except:
         traceback.print_exc()
         logging.error("[插入尺码] error!:" + str(traceback.format_exc()))
 
 
-async def main(loop):
-    # 等待mysql连接好
-    pool = await aiomysql.create_pool(host=conf.database['host'], port=conf.database['port'],
-                                      user=conf.database['user'], password=conf.database['passwd'],
-                                      db=conf.database['db'], loop=loop)
+async def main():
+    try:
+        # 清除超过30天的数据，只保留30天的数据
+        day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * 30
 
-    # 建立 client request
-    async with aiohttp.ClientSession() as client:
-        for page in range(400):
-            task = asyncio.create_task(getList(pool, client, page))
-            await asyncio.sleep(3)
+        ret_del = db_size.delete_many({'spiderTime': {'$lt': day_30}})
+        msg = "[清除30天数据] 已清除： " + str(ret_del.deleted_count) + ' 条'
+        print(msg)
+        logging.info(msg)
 
-        done, pending = await asyncio.wait({task})
 
-        if task in done:
-            print('[爬取完成]所有爬取进程已经全部完成')
-            logging.info("[爬取完成]所有爬取进程已经全部完成")
+        # 建立 client request
+        async with aiohttp.ClientSession() as client:
+            for page in range(1, 400):
+                task = asyncio.create_task(getList(client, page))
+                await asyncio.sleep(5)
+
+            done, pending = await asyncio.wait({task})
+
+            if task in done:
+                print('[爬取完成]所有爬取进程已经全部完成')
+                logging.info("[爬取完成]所有爬取进程已经全部完成")
+    except:
+        traceback.print_exc()
 
 
 if __name__ == '__main__':
     start_time = arrow.now().timestamp
+
+    # 日志配置
+    log_name = "log/mongo_du.log"
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                        datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
 
     try:
         # 获取用户token
         getToken()
         tokenTest()
 
-        # 日志配置
-        log_name = "log/du.log"
-        logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                            datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
-
         loop = asyncio.get_event_loop()
-        task = asyncio.ensure_future(main(loop))
+        task = asyncio.ensure_future(main())
         loop.run_until_complete(task)
+
     except:
         logging.error(traceback.format_exc())
 

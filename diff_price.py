@@ -1,7 +1,7 @@
 import traceback
 import common.conf as conf
 import common.function as myFunc
-import pymysql,  arrow, logging
+import pymysql, arrow, logging
 
 # 初始化excel
 # filename = '对比差价' + arrow.now().format('YYYY-MM-DD') + '.xlsx'
@@ -53,7 +53,6 @@ try:
                 'articleNumber': v[2],
                 'size': size,
             }, {}, 'spiderTime desc', 1)
-
 
             cursor.execute(sql_where)
             data = cursor.fetchone()

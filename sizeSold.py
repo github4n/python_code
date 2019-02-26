@@ -181,8 +181,8 @@ if __name__ == '__main__':
     use_time = end_time - start_time
 
     msg = '总耗时: ' + str(use_time) + " 开始时间: " + str(
-        arrow.get(start_time).format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(
-        arrow.get(end_time).format('YYYY-MM-DD HH:mm:ss'))
+        arrow.get(start_time).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(
+        arrow.get(end_time).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss'))
     print(msg)
     logging_size.info(msg)
 
