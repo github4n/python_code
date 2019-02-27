@@ -9,7 +9,7 @@ try:
     ret = requests.get('https://www.huilv.cc/')
     soup = BeautifulSoup(ret.text, "lxml")
     val = soup.select(".dollar_two .back")[0].text
-    
+
     db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                          user=conf.database['user'], password=conf.database['passwd'],
                          db=conf.database['db'], charset='utf8')

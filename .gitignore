@@ -1,5 +1,4 @@
 .idea/
-conf.py
 test_asyncio5.py
 test_asyncio4.py
 test_asyncio3.py
