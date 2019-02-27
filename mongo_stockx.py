@@ -123,15 +123,15 @@ async def spiderInsert(info_arr):
             # 新增数据
             ret_add = db_stockx_size.insert_one(info_arr)
             if ret_add.acknowledged:
-                print("[成功插入]：", info_arr['styleId'], ' 尺码：', info_arr['shoeSize'])
+                print("[成功插入]：", info_arr['styleId'], info_arr['shoeSize'])
             else:
-                print("[ERROR 插入]：", info_arr['styleId'], ' 尺码：', info_arr['shoeSize'])
+                print("[ERROR 插入]：", info_arr['styleId'], info_arr['shoeSize'])
 
         else:
             # 判断今天是否已经爬取过   今日凌晨时间-爬取时间 > 0 则未爬取过
             is_spider = arrow.now().floor('day').timestamp - int(ret['updateTime'])
             if is_spider < 0:
-                print("[已经爬取]：", info_arr['styleId'], ' 尺码：', info_arr['shoeSize'])
+                print("[已经爬取]：", info_arr['styleId'], info_arr['shoeSize'])
                 return
 
             ret_edit = db_stockx_size.update_one(where, {'$set': {
@@ -142,7 +142,7 @@ async def spiderInsert(info_arr):
                 'updateTime': now_time,
             }})
             if ret_edit.modified_count == 1:
-                print("[修改成功]：", info_arr['styleId'], ' 尺码：', info_arr['shoeSize'])
+                print("[修改成功]：", info_arr['styleId'], info_arr['shoeSize'])
             else:
                 print("没有任何修改")
 
@@ -164,7 +164,7 @@ async def main():
             for page in range(30):
                 api_url = DOMAIN + v + str(page)
                 task = asyncio.create_task(spiderList(client, api_url, q))
-                await asyncio.sleep(4)
+                await asyncio.sleep(10)
 
         done, pending = await asyncio.wait({task})
         if task in done:

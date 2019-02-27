@@ -301,7 +301,6 @@ async def insert(info_arr, sizeList):
 
         where = {'articleNumber': info_arr['articleNumber']}
         ret = db_product.find_one(where)
-        print(ret)
 
         if ret is not None:
             is_spider = arrow.now().floor('day').timestamp - ret['updateTime']
@@ -358,10 +357,12 @@ async def insertSize(size_arr):
 
         ret_add = db_size.insert_many(size_arr)
 
-        if ret_add:
-            print('[插入尺码成功]：', size_arr['articleNumber'], ' size:', size_arr['size'])
+        if ret_add.acknowledged:
+            for v in size_arr:
+                print('[插入尺码成功]：', v['articleNumber'], v['size'])
         else:
-            print('[插入尺码失败]：', size_arr['articleNumber'], ' size:', size_arr['size'])
+            for v in size_arr:
+                print('[插入尺码失败]：', v['articleNumber'], v['size'])
     except:
         traceback.print_exc()
         logging.error("[插入尺码] error!:" + str(traceback.format_exc()))
@@ -373,7 +374,9 @@ async def main():
         day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * 30
 
         ret_del = db_size.delete_many({'spiderTime': {'$lt': day_30}})
-        msg = "[清除30天数据] 已清除： " + str(ret_del.deleted_count) + ' 条'
+        msg = "[清除30天数据] " + " 条件时间： " + str(
+            arrow.get(day_30).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')) + "已清除： " + str(
+            ret_del.deleted_count) + ' 条'
         print(msg)
         logging.info(msg)
 

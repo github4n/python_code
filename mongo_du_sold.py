@@ -166,10 +166,11 @@ async def main(loop):
 
     ret_del = du.db_sold_record.delete_many({'spiderTime': {'$lt': day_30}})
 
-    msg = "[清除30天数据] 已清除： " + str(ret_del.deleted_count) + ' 条'
+    msg = "[清除30天数据] " + " 条件时间： " + str(
+        arrow.get(day_30).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')) + "已清除： " + str(
+        ret_del.deleted_count) + ' 条'
     print(msg)
     logging_size.info(msg)
-
 
     # 建立 client request
     async with du.aiohttp.ClientSession() as client:
