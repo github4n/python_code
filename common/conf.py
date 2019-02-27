@@ -36,6 +36,7 @@ pro_database = {
 
 # 判断是服务器还是本机
 ip = socket.gethostbyname(socket.gethostname())
+print(ip)
 if ip == '144.48.9.105':
     database = pro_database
 else:
