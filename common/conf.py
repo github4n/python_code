@@ -28,16 +28,14 @@ dev_database = {
 pro_database = {
     "host": '103.51.145.44',
     "port": 3306,
-    "user": 'rank666_com',
-    "passwd": 'RdPK775JrWY3Psnb',
-    "db": 'rank666_com',
+    "user": 'www_91rank_com',
+    "passwd": 'rKAcAiSdna',
+    "db": 'www_91rank_com',
     "charset": 'utf8',
 }
 
-# 判断是服务器还是本机
 ip = socket.gethostbyname(socket.gethostname())
-print(ip)
-if ip == '144.48.9.105':
+if ip == '127.0.0.1':
     database = pro_database
 else:
     database = dev_database
