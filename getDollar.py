@@ -16,6 +16,10 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
 
 cursor = db.cursor()
 sql = myFunc.updateSql('dollar', {'val': val, 'spiderTime': arrow.now().timestamp}, {'id': 1})
-cursor.execute(sql)
+ret = cursor.execute(sql)
+if ret:
+    print("[修改成功]", 'dollar', val)
+else:
+    print("[修改失败]")
 db.close()
 
