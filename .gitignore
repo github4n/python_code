@@ -30,3 +30,6 @@ du_product.py
 styleId.txt
 __pycache__/
 *.xlsx
+test_mongo.py
+kuaishou.py
+excel.py
