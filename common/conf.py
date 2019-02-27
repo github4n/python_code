@@ -28,9 +28,9 @@ dev_database = {
 pro_database = {
     "host": '127.0.0.1',
     "port": 3306,
-    "user": 'www_91rank_com',
-    "passwd": 'rKAcAiSdna',
-    "db": 'www_91rank_com',
+    "user": 'rank666_com',
+    "passwd": 'RdPK775JrWY3Psnb',
+    "db": 'rank666_com',
     "charset": 'utf8',
 }
 
