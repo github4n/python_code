@@ -26,7 +26,7 @@ dev_database = {
 }
 # 线上
 pro_database = {
-    "host": '103.51.145.44',
+    "host": '127.0.0.1',
     "port": 3306,
     "user": 'www_91rank_com',
     "passwd": 'rKAcAiSdna',
