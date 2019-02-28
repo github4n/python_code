@@ -95,7 +95,7 @@ try:
                 # 纯利润
                 profit = diff - freight - charge - du_charge
                 # 价格信息
-                price_info = ' 手续费(毒)：' + str(charge) + ' 手续费(绿叉)：' + str(charge) + ' 运费：' + str(freight)
+                price_info = ' 手续费(毒)：' + str(du_charge) + ' 手续费(绿叉)：' + str(charge) + ' 运费：' + str(freight)
 
                 data = {
                     'duTitle': ret_du['title'],
