@@ -84,18 +84,16 @@ try:
                 else:
                     soldNum = ret_sold['soldNum']
 
-                # 运费
-                freight = 100
-                # stockx 手续费
+                # stockx 运费
                 charge = round(13.95 * float(dollar), 1)
                 # 毒 手续费 大于299 只收299手续费
                 du_charge = round(du_price * 0.095, 1)
                 if du_charge > 299:
                     du_charge = 299
                 # 纯利润
-                profit = diff - freight - charge - du_charge
+                profit = diff - charge - du_charge
                 # 价格信息
-                price_info = ' 手续费(毒)：' + str(du_charge) + ' 手续费(绿叉)：' + str(charge) + ' 运费：' + str(freight)
+                price_info = ' 手续费(毒)：' + str(du_charge) + ' 手续费(绿叉)：' + str(charge)
 
                 data = {
                     'duTitle': ret_du['title'],
