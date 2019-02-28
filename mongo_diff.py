@@ -115,7 +115,7 @@ try:
                         'profit': profit,
                         'size': size,
                         'createTime': arrow.now().timestamp,
-                        'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
+                        'ceil': round((float(profit) / float(stockx_price)) * 100, 2)
                     }
 
                     ret_diff = db_diff.insert_one(data)
