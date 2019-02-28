@@ -1,7 +1,9 @@
 import traceback
 import common.conf as conf
+import common.size as size_change
 import common.function as myFunc
 import pymysql, arrow, logging, pymongo
+
 # 链接mysql
 db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
                      user=conf.database['user'], password=conf.database['passwd'],
@@ -45,86 +47,79 @@ try:
     for v in ret_stockx:
         num += 1
         print("[开始查询] 第 ", num, ' 条')
-        # 去除size中的特殊符号
-        size = v['shoeSize'].replace('Y', '')
-        size = size.replace('y', '')
-        size = size.replace('K', '')
-        size = size.replace('W', '')
-        # 把奇怪的码数保存起来
-        if size not in conf.size_conf:
-            logging.info(v['styleId'] + ' ' + size)
+        if v['shoeSize'] in size_change.size:
+            size = size_change.size[v['shoeSize']]
         else:
-            # 去除一些奇怪的码
-            if len(size) <= 4 and float(size) < 20:
-                size = conf.size_conf[size]
-            else:
-                size = 0
+            # 把奇怪的码数保存起来
+            logging.info(v['styleId'] + ' ' + v['shoeSize'])
+            print("[奇怪尺码]： ", v['shoeSize'])
+            continue
 
-            # 查询 毒 的数据
-            where = {
-                'articleNumber': v['styleId'],
-                'size': size,
-            }
-            ret_find = db_size.find_one(where)
+        # 查询 毒 的数据
+        where = {
+            'articleNumber': v['styleId'],
+            'size': size,
+        }
+        ret_find = db_size.find_one(where)
 
-            if ret_find is not None:
-                # 获取毒的价格
-                du_price = ret_find['price'] / 100
-                # stockx价格
-                stockx_price = round(float(v['lowestAsk']) * float(dollar), 2)
-                # 获取差价
-                diff = round(du_price - stockx_price, 2)
-                # 如果差价在100以上
-                if diff > 100 and stockx_price != 0:
-                    # 获取毒的 图片 、 标题
-                    ret_du = db_product.find_one({'articleNumber': v['styleId']})
-                    if ret_du is None:
-                        print("[无数据] ", v['styleId'], ' size：', size)
-                        continue
+        if ret_find is not None:
+            # 获取毒的价格
+            du_price = ret_find['price'] / 100
+            # stockx价格
+            stockx_price = round(float(v['lowestAsk']) * float(dollar), 2)
+            # 获取差价
+            diff = round(du_price - stockx_price, 2)
+            # 如果差价在100以上
+            if diff > 100 and stockx_price != 0:
+                # 获取毒的 图片 、 标题
+                ret_du = db_product.find_one({'articleNumber': v['styleId']})
+                if ret_du is None:
+                    print("[无数据] ", v['styleId'], ' size：', size)
+                    continue
 
-                    # 查询这款鞋子在毒的销量
-                    ret_sold = db_sold.find_one(where)
-                    if ret_sold is None:
-                        soldNum = 0
-                    else:
-                        soldNum = ret_sold['soldNum']
+                # 查询这款鞋子在毒的销量
+                ret_sold = db_sold.find_one(where)
+                if ret_sold is None:
+                    soldNum = 0
+                else:
+                    soldNum = ret_sold['soldNum']
 
-                    # 运费
-                    freight = 100
-                    # stockx 手续费
-                    charge = round(13.95 * float(dollar), 1)
-                    # 毒 手续费
-                    du_charge = round(du_price * 0.095, 1)
-                    # 纯利润
-                    profit = diff - freight - charge - du_charge
+                # 运费
+                freight = 100
+                # stockx 手续费
+                charge = round(13.95 * float(dollar), 1)
+                # 毒 手续费
+                du_charge = round(du_price * 0.095, 1)
+                # 纯利润
+                profit = diff - freight - charge - du_charge
 
+                data = {
+                    'duTitle': ret_du['title'],
+                    'duPrice': du_price,
+                    'duSoldNum': soldNum,
 
-                    data = {
-                        'duTitle': ret_du['title'],
-                        'duPrice': du_price,
-                        'duSoldNum': soldNum,
+                    'stockxTitle': v['title'],
+                    'stockxPrice': round(stockx_price),
+                    'stockxShortName': v['shortDescription'],
+                    'stockxSoldNum': v['deadstockSold'],
 
-                        'stockxTitle': v['title'],
-                        'stockxPrice': round(stockx_price),
-                        'stockxShortName': v['shortDescription'],
-                        'stockxSoldNum': v['deadstockSold'],
+                    'articleNumber': v['styleId'],
+                    'imageUrl': ret_du['logoUrl'],
+                    'diffPrice': diff,
+                    'profit': profit,
+                    'size': size,
+                    'createTime': arrow.now().timestamp,
+                    'ceil': round((float(profit) / float(stockx_price)) * 100, 2)
+                }
 
-                        'articleNumber': v['styleId'],
-                        'imageUrl': ret_du['logoUrl'],
-                        'diffPrice': diff,
-                        'profit': profit,
-                        'size': size,
-                        'createTime': arrow.now().timestamp,
-                        'ceil': round((float(profit) / float(stockx_price)) * 100, 2)
-                    }
+                ret_diff = db_diff.insert_one(data)
 
-                    ret_diff = db_diff.insert_one(data)
-
-                    msg = ['货号: ', v['styleId'], '名称：', ret_du['title'], ' size:', size, '纯利润:', data['profit'],' diff:', diff]
-                    if ret_diff:
-                        print("[插入成功]：", " ".join('%s' % id for id in msg))
-                    else:
-                        print("[插入失败]：", " ".join('%s' % id for id in msg))
+                msg = ['货号: ', v['styleId'], '名称：', ret_du['title'], ' size:', size, '纯利润:', data['profit'], ' diff:',
+                       diff]
+                if ret_diff:
+                    print("[插入成功]：", " ".join('%s' % id for id in msg))
+                else:
+                    print("[插入失败]：", " ".join('%s' % id for id in msg))
 
     end_time = arrow.now().timestamp
     use_time = end_time - start_time
