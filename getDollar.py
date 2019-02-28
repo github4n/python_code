@@ -21,6 +21,6 @@ if ret:
     print("[修改成功]", 'dollar', val)
 else:
     print("[修改失败]")
-    
+
 db.close()
 

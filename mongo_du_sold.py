@@ -46,7 +46,6 @@ async def getSizeSoldNum(client, productInfo):
 
         # 如果还有下一页  并且获取的数据的时间小于最终爬取时间
         while res['data']['lastId'] != '' and int(res['data']['lastId']) > int(lastId):
-            print(res['data']['lastId'])
             lastId_arr.append(res['data']['lastId'])
             for v in res['data']['list']:
                 temp_size = v['item']['size']
