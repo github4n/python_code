@@ -89,6 +89,16 @@ try:
                     else:
                         soldNum = ret_sold['soldNum']
 
+                    # 运费
+                    freight = 100
+                    # stockx 手续费
+                    charge = round(13.95 * float(dollar), 1)
+                    # 毒 手续费
+                    du_charge = round(du_price * 0.095, 1)
+                    # 纯利润
+                    profit = diff - freight - charge - du_charge
+
+
                     data = {
                         'duTitle': ret_du['title'],
                         'duPrice': du_price,
@@ -102,6 +112,7 @@ try:
                         'articleNumber': v['styleId'],
                         'imageUrl': ret_du['logoUrl'],
                         'diffPrice': diff,
+                        'profit': profit,
                         'size': size,
                         'createTime': arrow.now().timestamp,
                         'ceil': round((float(diff) / float(stockx_price)) * 100, 2)
@@ -109,7 +120,7 @@ try:
 
                     ret_diff = db_diff.insert_one(data)
 
-                    msg = ['货号: ', v['styleId'], '名称：', ret_du['title'], ' size:', size, ' diff:', diff]
+                    msg = ['货号: ', v['styleId'], '名称：', ret_du['title'], ' size:', size, '纯利润:', data['profit'],' diff:', diff]
                     if ret_diff:
                         print("[插入成功]：", " ".join('%s' % id for id in msg))
                     else:
