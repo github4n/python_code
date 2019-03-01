@@ -60,7 +60,7 @@ try:
             'articleNumber': v['styleId'],
             'size': size,
         }
-        ret_find = db_size.find_one(where)
+        ret_find = db_size.find(where).sort('spiderTime', pymongo.DESCENDING).limit(1)
 
         if ret_find is not None:
             # 获取毒的价格
