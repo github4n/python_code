@@ -59,8 +59,9 @@ try:
         where = {
             'articleNumber': v['styleId'],
             'size': size,
+            'spiderTime': {'$gt':arrow.now().floor('day').timestamp}
         }
-        ret_find = db_size.find(where).sort('spiderTime', pymongo.DESCENDING).limit(1)
+        ret_find = db_size.find_one(where)
 
         if ret_find is not None:
             # 获取毒的价格
