@@ -56,7 +56,7 @@ async def getSizeSoldNum(client, productInfo):
                 'lastId': res['data']['lastId'],
                 'limit': '20',
             })
-
+            await du.asyncio.sleep(1)
             res = await du.fetch(client, url)
 
         print('articleNumber:', articleNumber, "  爬取完毕 开始统计各尺码销量")
@@ -122,6 +122,7 @@ async def insertSizeSold(data):
                     'articleNumber': data['articleNumber'],
                     'size': data['size'],
                     'soldNum': soldNum,
+                    'add': data['soldNum'],
                     'spiderTime': now_time,
                 })
 
@@ -147,7 +148,7 @@ async def getAllList(client):
         for v in ret:
             task = du.asyncio.create_task(
                 getSizeSoldNum(client, {'productId': v['productId'], 'articleNumber': v['articleNumber']}))
-            await du.asyncio.sleep(0.5)
+            await du.asyncio.sleep(2)
 
         done, pending = await du.asyncio.wait({task})
 
