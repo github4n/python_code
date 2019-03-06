@@ -112,6 +112,7 @@ try:
 
                     'articleNumber': v['styleId'],
                     'imageUrl': ret_du['logoUrl'],
+                    'sellDate': arrow.get(ret_du['sellDate']).timestamp,
                     'diffPrice': diff,
                     'profit': profit,
                     'size': size,
