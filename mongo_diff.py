@@ -96,7 +96,7 @@ try:
                 if du_charge > 299:
                     du_charge = 299
                 # 纯利润
-                profit = round(diff - charge - du_charge, 2)
+                profit = round(diff - charge - du_charge, 1)
                 # 价格信息
                 price_info = ' 手续费(毒)：' + str(du_charge) + ' 手续费(绿叉)：' + str(charge)
 
