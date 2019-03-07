@@ -2,25 +2,24 @@ import common.conf as conf
 import aiohttp, asyncio, arrow, logging, traceback, pymysql, pymongo
 from redis_queue import RedisQueue
 
-
-
 table_name = "stockx_product_size"
 now_time = arrow.now().timestamp
 # 域名
 DOMAIN = 'https://stockx.com'
 # 接口地址
 URL = {
-    'featured': '/api/browse?productCategory=sneakers&page=',
-    'newLowestAsks': '/api/browse?currency=GBP&order=DESC&productCategory=sneakers&sort=recent_asks&page=',
-    'newHighestBids': '/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=recent_bids&page=',
-    'averageSoldPrice': '/api/browse?order=DESC&productCategory=sneakers&sort=average_deadstock_price&page=',
-    'totalSold': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
-    'volatility': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
-    'pricePremiun': '/api/browse?order=DESC&productCategory=sneakers&sort=price_premium&page=',
-    'lastSale': '/api/browse?order=DESC&productCategory=sneakers&sort=last_sale&page=',
-    'lowestAsk': '/api/browse?order=ASC&productCategory=sneakers&sort=lowest_ask&page=',
-    'highestBid': '/api/browse?order=DESC&productCategory=sneakers&sort=highest_bid&page=',
-    'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
+    # 'featured': '/api/browse?productCategory=sneakers&page=',
+    'popular': '/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=most-active&page=',
+    # 'newLowestAsks': '/api/browse?currency=GBP&order=DESC&productCategory=sneakers&sort=recent_asks&page=',
+    # 'newHighestBids': '/api/browse?currency=USD&order=DESC&productCategory=sneakers&sort=recent_bids&page=',
+    # 'averageSoldPrice': '/api/browse?order=DESC&productCategory=sneakers&sort=average_deadstock_price&page=',
+    # 'totalSold': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
+    # 'volatility': '/api/browse?productCategory=sneakers&sort=deadstock_sold&order=DESC&page=',
+    # 'pricePremiun': '/api/browse?order=DESC&productCategory=sneakers&sort=price_premium&page=',
+    # 'lastSale': '/api/browse?order=DESC&productCategory=sneakers&sort=last_sale&page=',
+    # 'lowestAsk': '/api/browse?order=ASC&productCategory=sneakers&sort=lowest_ask&page=',
+    # 'highestBid': '/api/browse?order=DESC&productCategory=sneakers&sort=highest_bid&page=',
+    # 'releaseDate': '/api/browse?order=DESC&productCategory=sneakers&sort=release_date&page=',
 }
 
 # 连接mongodb
@@ -29,6 +28,7 @@ mydb = myclient["du"]
 db_stockx_size = mydb["stockx_size"]
 
 sem = asyncio.Semaphore(conf.async_num)
+
 
 async def getData(client, url):
     async with sem:
@@ -50,6 +50,7 @@ async def getData(client, url):
 
         logging.error('[尝试重连] 失败！ URL:' + url)
         return False
+
 
 async def spiderList(client, api_url, q):
     try:
@@ -161,7 +162,7 @@ async def main():
     # 建立 client request
     async with aiohttp.ClientSession() as client:
         for k, v in URL.items():
-            for page in range(30):
+            for page in range(1, 25):
                 api_url = DOMAIN + v + str(page)
                 task = asyncio.create_task(spiderList(client, api_url, q))
                 await asyncio.sleep(10)
@@ -184,7 +185,6 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     task = asyncio.ensure_future(main())
     loop.run_until_complete(task)
-
 
     end_time = arrow.now().timestamp
     use_time = end_time - start_time
