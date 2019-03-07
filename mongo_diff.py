@@ -43,7 +43,7 @@ num = 0
 
 try:
     # 获取所有stockx数据
-    ret_stockx = db_stockx_size.find({'year': {'$gt': 2018}})
+    ret_stockx = db_stockx_size.find({'year': {'$gte': 2018}})
     for v in ret_stockx:
         num += 1
         print("[开始查询] 第 ", num, ' 条', '货号：', v['styleId'], 'size:', v['shoeSize'])
