@@ -11,7 +11,7 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
 cursor = db.cursor()
 
 # 连接mongodb
-myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+myclient = pymongo.MongoClient("mongodb://144.48.9.105:27017/")
 mydb = myclient["du"]
 
 db_diff = mydb["diff"]
@@ -44,6 +44,7 @@ num = 0
 try:
     # 获取所有stockx数据
     ret_stockx = db_stockx_size.find({'year': {'$gte': 2018}})
+
     for v in ret_stockx:
         num += 1
         print("[开始查询] 第 ", num, ' 条', '货号：', v['styleId'], 'size:', v['shoeSize'])
@@ -54,7 +55,6 @@ try:
             logging.info(v['styleId'] + ' ' + v['shoeSize'])
             print("[奇怪尺码]： ", v['shoeSize'])
             continue
-
         # 查询 毒 的数据
         where = {
             'articleNumber': v['styleId'],
@@ -63,9 +63,9 @@ try:
         new_where = {
             'articleNumber': v['styleId'],
             'size': size,
-            'spiderTime': {'$gt': arrow.now().floor('day').timestamp}
+            'spiderTime': {'$gte': arrow.now().floor('day').timestamp}
         }
-        ret_find = db_size.find_one(new_where)
+        ret_find = db_size.find_one(new_where, {'price'})
 
         if ret_find is not None:
             # 获取毒的价格
@@ -77,13 +77,14 @@ try:
             # 如果差价在100以上
             if diff > 100 and stockx_price != 0:
                 # 获取毒的 图片 、 标题
-                ret_du = db_product.find_one({'articleNumber': v['styleId']})
+                ret_du = db_product.find_one({'articleNumber': v['styleId']}, {'title','logoUrl','sellDate'})
                 if ret_du is None:
                     print("[无数据] ", v['styleId'], ' size：', size)
                     continue
 
                 # 查询这款鞋子在毒的销量
-                ret_sold = db_sold.find_one(where)
+                ret_sold = db_sold.find_one(where, {'soldNum'})
+
                 if ret_sold is None:
                     soldNum = 0
                 else:
