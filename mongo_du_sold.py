@@ -162,7 +162,7 @@ async def getAllList(client):
 
 async def main(loop):
     # 清除超过30天的数据，只保留30天的数据
-    day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * 30
+    day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * conf.clear_day
 
     ret_del = du.db_sold_record.delete_many({'spiderTime': {'$lt': day_30}})
 

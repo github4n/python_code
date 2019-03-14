@@ -371,7 +371,7 @@ async def insertSize(size_arr):
 async def main():
     try:
         # 清除超过30天的数据，只保留30天的数据
-        day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * 30
+        day_30 = arrow.now().floor('day').timestamp - 3600 * 24 * conf.clear_day
 
         ret_del = db_size.delete_many({'spiderTime': {'$lt': day_30}})
         msg = "[清除30天数据] " + " 条件时间： " + str(

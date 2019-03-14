@@ -13,6 +13,8 @@ stockx_headers = {
 }
 async_num = 200
 
+clear_day = 60
+
 # 开发
 dev_database = {
     "host": '127.0.0.1',

@@ -33,3 +33,7 @@ __pycache__/
 test_mongo.py
 kuaishou.py
 excel.py
+build/
+dist/
+*.pkl
+*.spec
