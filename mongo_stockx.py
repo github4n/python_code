@@ -23,7 +23,7 @@ URL = {
 }
 
 # 连接mongodb
-myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+myclient = pymongo.MongoClient("mongodb://" + conf.mongo['user'] + ':' + conf.mongo['passwd'] + '@' + conf.mongo['host'] + ':' + conf.mongo['port'])
 mydb = myclient["du"]
 db_stockx_size = mydb["stockx_size"]
 

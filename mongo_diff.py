@@ -11,7 +11,7 @@ db = pymysql.connect(host=conf.database['host'], port=conf.database['port'],
 cursor = db.cursor()
 
 # 连接mongodb
-myclient = pymongo.MongoClient("mongodb://127.0.0.1:27017/")
+myclient = pymongo.MongoClient("mongodb://" + conf.mongo['user'] + ':' + conf.mongo['passwd'] + '@' + conf.mongo['host'] + ':' + conf.mongo['port'])
 mydb = myclient["du"]
 
 db_diff = mydb["diff"]

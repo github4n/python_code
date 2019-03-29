@@ -24,21 +24,38 @@ dev_database = {
     "db": 'du',
     "charset": 'utf8',
 }
+dev_mongo = {
+    "host": '127.0.0.1',
+    "port": '27017',
+    "user": '',
+    "passwd": '',
+}
 # 线上
 pro_database = {
-    "host": '127.0.0.1',
+    "host": '144.48.9.105',
     "port": 3306,
     "user": 'rank666_com',
     "passwd": 'RdPK775JrWY3Psnb',
     "db": 'rank666_com',
     "charset": 'utf8',
 }
+pro_mongo = {
+    "host": '127.0.0.1',
+    "port": '27017',
+    "user": 'levislin',
+    "passwd": '!!23Bayuesiri',
+}
+
+
 
 ip = socket.gethostbyname(socket.gethostname())
 if ip == '127.0.0.1':
     database = pro_database
+    mongo = pro_mongo
 else:
     database = dev_database
+    mongo = dev_mongo
+
 
 # 表设置
 TABLE = {

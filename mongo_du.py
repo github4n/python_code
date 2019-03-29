@@ -46,8 +46,9 @@ now_time = arrow.now().timestamp
 sem = asyncio.Semaphore(conf.async_num)
 
 # 连接mongodb
-myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+myclient = pymongo.MongoClient("mongodb://" + conf.mongo['user'] + ':' + conf.mongo['passwd'] + '@' + conf.mongo['host'] + ':' + conf.mongo['port'])
 mydb = myclient["du"]
+
 db_product = mydb["du_product"]
 db_size = mydb["du_size"]
 db_sold = mydb['du_sold']
