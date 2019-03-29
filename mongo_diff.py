@@ -25,7 +25,7 @@ db_sold = mydb["du_sold"]
 # 日志配置
 log_name = "log/mongo_diff.log"
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+                    datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='a')
 
 now_time = arrow.now().timestamp
 start_time = arrow.now().timestamp

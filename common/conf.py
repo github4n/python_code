@@ -45,8 +45,8 @@ TABLE = {
     'product': 'product',
     'sold': 'product_sold',
     'size': 'product_size',
-    'token': 'dollar',
-    'dollar': 'dollar',
+    'token': 'lt_dollar',
+    'dollar': 'lt_dollar',
     'diff': 'diff',
     'stockx': 'stockx_product_size',
 }

@@ -403,7 +403,7 @@ if __name__ == '__main__':
     log_name = "log/mongo_du.log"
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                        datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+                        datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='a')
 
     try:
         # 获取用户token

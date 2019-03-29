@@ -190,7 +190,7 @@ if __name__ == '__main__':
     log_name = "log/mongo_du_sold.log"
     logging_size.basicConfig(level=logging_size.DEBUG,
                              format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                             datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='w')
+                             datefmt='%a, %d %b %Y %H:%M:%S', filename=log_name, filemode='a')
     # 获取用户token
     du.getToken()
 
