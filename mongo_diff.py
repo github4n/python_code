@@ -31,7 +31,7 @@ now_time = arrow.now().timestamp
 start_time = arrow.now().timestamp
 
 # 获取美元汇率
-sql = myFunc.selectSql('dollar', {'id': 1}, ['val'])
+sql = myFunc.selectSql('lt_dollar', {'id': 1}, ['val'])
 cursor.execute(sql)
 dollar = cursor.fetchone()[0]
 
