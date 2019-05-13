@@ -10,16 +10,19 @@ import aiohttp, asyncio, aiomysql, pymysql, pymongo
 
 # header头设置
 HEADERS = {
-    'duuuid': '860322734564807',
-    'duv': '3.2.1',
+    'duuuid': '309c23acc4954021',
+    'duv': '3.5.5',
     'duplatform': 'android',
 }
+COOKIES = {}
 # 用户设置
 USER = {
     'userName': '13105514937',
     'password': '9efb9f362c1d4801c254744176316b6b',
     'type': 'pwd',
     'sign': 'f917f4df74b63839e94cfed32944f97f',
+    'sourcePage': '',
+    'countryCode': '86',
 }
 # 域名设置
 URL = {
@@ -53,6 +56,9 @@ db_product = mydb["du_product"]
 db_size = mydb["du_size"]
 db_sold = mydb['du_sold']
 db_sold_record = mydb['du_sold_record']
+db_price = mydb['price']
+db_login = mydb['login']
+db_change = mydb['change']
 
 
 # 登录状态测试
@@ -93,7 +99,6 @@ def getToken(force=False):
                              user=conf.database['user'], password=conf.database['passwd'],
                              db=conf.database['db'], charset='utf8')
         cursor = db.cursor()
-
         mysql_data = {}
         # 获取数据库token
         sql = myFunc.selectSql(conf.TABLE['token'], {'id': 2}, ['val', 'spiderTime'])
@@ -114,7 +119,7 @@ def getToken(force=False):
         if 'token' in mysql_data and 'cookie' in mysql_data and not force:
             HEADERS['duloginToken'] = mysql_data['token']
             HEADERS['Cookie'] = mysql_data['cookie']
-            print('获取数据库 token，cookie')
+            print('获取数据库 token，cookie', HEADERS)
             return
 
         # 重置
@@ -249,12 +254,13 @@ async def getList(client, page):
 
         productList = data['data']['productList']
 
+
         # 如果商品列表为空不再爬取
         if len(productList) == 0:
             return
 
         for v in productList:
-            asyncio.ensure_future(getDetail(client, v['product']['productId']))
+            asyncio.ensure_future(getDetail(client, v['productId']))
     except:
         traceback.print_exc()
         logging.error("[爬取列表] error:" + traceback.format_exc())
@@ -335,7 +341,7 @@ async def insert(info_arr, sizeList):
         for v in sizeList:
             if 'price' in v['item'] and v['item']['price'] != 0:
                 size_arr.append({
-                    'articleNumber': v['item']['product']['articleNumber'],
+                    'articleNumber': info_arr['articleNumber'],
                     'size': v['size'],
                     'formatSize': v['formatSize'],
                     'price': v['item']['price'],
@@ -380,7 +386,6 @@ async def main():
             ret_del.deleted_count) + ' 条'
         print(msg)
         logging.info(msg)
-
 
         # 建立 client request
         async with aiohttp.ClientSession() as client:
