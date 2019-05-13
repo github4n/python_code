@@ -16,10 +16,10 @@ HEADERS = {
 }
 # 用户设置
 USER = {
-    'userName': '18968804688',
+    'userName': '13105514937',
     'password': '9efb9f362c1d4801c254744176316b6b',
     'type': 'pwd',
-    'sign': '92f338da5520da5d60403edcfb2f0867',
+    'sign': 'f917f4df74b63839e94cfed32944f97f',
 }
 # 域名设置
 URL = {
@@ -46,7 +46,7 @@ now_time = arrow.now().timestamp
 sem = asyncio.Semaphore(conf.async_num)
 
 # 连接mongodb
-myclient = pymongo.MongoClient("mongodb://" + conf.mongo['user'] + ':' + conf.mongo['passwd'] + '@' + conf.mongo['host'] + ':' + conf.mongo['port'])
+myclient = pymongo.MongoClient("mongodb://" + conf.mongo['host'] + ':' + conf.mongo['port'])
 mydb = myclient["du"]
 
 db_product = mydb["du_product"]
