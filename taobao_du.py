@@ -77,8 +77,8 @@ def getChange():
     # 去重 获取所有的商品ID
     list = du.db_change.distinct("articleNumber")
     for v in list:
-        print(v)
-        getDetail(v)
+        print("开始爬取", "货号：", v)
+        # getDetail(v)
 
     return
 
@@ -118,7 +118,7 @@ def addSize(articleNumber, size_list):
             if ret.acknowledged:
                 print("更新尺码价格：", "成功", "货号：", articleNumber, 'size：', v['size'])
             else:
-                print("添加尺码价格：", "成功", articleNumber, 'size：', v['size'])
+                print("更新尺码价格：", "失败", "货号：", articleNumber, 'size：', v['size'])
 
     return True
 
