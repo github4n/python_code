@@ -77,7 +77,7 @@ def getChange():
     # 去重 获取所有的商品ID
     list = du.db_change.distinct("product_id")
     for v in list:
-        print("开始爬取", "货号：", v)
+        print("开始爬取", "商品id：", v)
         getDetail(v)
 
     return
