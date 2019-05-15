@@ -78,7 +78,7 @@ def getChange():
     list = du.db_change.distinct("articleNumber")
     for v in list:
         print("开始爬取", "货号：", v)
-        # getDetail(v)
+        getDetail(v)
 
     return
 
