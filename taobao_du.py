@@ -12,6 +12,7 @@ def login(force=False):
     }
     # 非强制, 使用数据库中的token
     if not force:
+        print(2)
         ret_find = du.db_login.find_one(where)
         if ret_find:
             du.HEADERS['duloginToken'] = ret_find['loginToken']
@@ -19,13 +20,17 @@ def login(force=False):
             print("更新登录状态-使用数据库数据", "成功\n", du.HEADERS)
             return True
 
+    # 清除token
+    du.HEADERS.pop('duloginToken')
     # 强制重新登录
     ret = requests.post(du.URL['domain'] + du.URL['login'], data=du.USER, headers=du.HEADERS)
     if ret.status_code != 200:
-        print("登录接口异常")
+        print("登录接口异常", "非200")
+        return False
 
     if ret.json()['status'] != 200:
-        print("接口错误：", ret.json()['msg'])
+        print("登录接口错误：", ret.json())
+        return False
 
     loginToken = ret.json()['data']['loginInfo']['loginToken']
     cookie = ret.cookies.get_dict()
@@ -35,10 +40,12 @@ def login(force=False):
         'loginToken': loginToken,
         'cookie': cookie
     }}, upsert=True)
+
     if not ret_find.acknowledged:
         print("更新登录状态：", "失败！")
     else:
         print("更新登录状态:：", "成功！")
+
 
     du.HEADERS['duloginToken'] = loginToken
     du.COOKIES = cookie
