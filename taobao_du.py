@@ -1,5 +1,6 @@
+import common.function as myFunc
 import mongo_du as du
-import requests, arrow, time
+import requests, arrow, time, hashlib
 
 # 当前时间
 now_time = arrow.get(arrow.now().timestamp).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')
@@ -40,7 +41,7 @@ def login(force=False):
         print("更新登录状态:：", "成功！")
 
     du.HEADERS['duloginToken'] = loginToken
-    du.COOKIES = ret_find['cookie']
+    du.COOKIES = cookie
 
     return True
 
@@ -74,6 +75,8 @@ def fetch(url):
 
 # 获取所有要抓取的鞋子
 def getChange():
+    login()
+
     # 去重 获取所有的商品ID
     list = du.db_change.distinct("product_id")
     for v in list:
@@ -124,5 +127,5 @@ def addSize(articleNumber, size_list):
 
 
 if __name__ == '__main__':
-    login()
     getChange()
+

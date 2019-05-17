@@ -17,7 +17,7 @@ clear_day = 60
 
 # 开发
 dev_database = {
-    "host": '127.0.0.1',
+    "host": '144.48.9.105',
     "port": 3306,
     "user": 'root',
     "passwd": 'root',
@@ -46,8 +46,6 @@ pro_mongo = {
     "passwd": '!!23Bayuesiri',
 }
 
-
-
 ip = socket.gethostbyname(socket.gethostname())
 if ip == '127.0.0.1':
     database = pro_database
@@ -66,4 +64,7 @@ TABLE = {
     'dollar': 'lt_dollar',
     'diff': 'diff',
     'stockx': 'stockx_product_size',
+    'user': 'lt_user',
+    'function': 'lt_user_function',
+    'taobao': 'lt_taobao',
 }
