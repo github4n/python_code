@@ -27,7 +27,6 @@ def login(force=False):
     }
     # 非强制, 使用数据库中的token
     if not force:
-        print(2)
         ret_find = du.db_login.find_one(where)
         if ret_find:
             du.HEADERS['duloginToken'] = ret_find['loginToken']
@@ -36,7 +35,9 @@ def login(force=False):
             return True
 
     # 清除token
-    du.HEADERS.pop('duloginToken')
+    if 'duloginToken' in du.HEADERS:
+        du.HEADERS.pop('duloginToken')
+
     # 强制重新登录
     ret = requests.post(du.URL['domain'] + du.URL['login'], data=du.USER, headers=du.HEADERS)
     if ret.status_code != 200:
@@ -61,7 +62,6 @@ def login(force=False):
     else:
         print("更新登录状态:：", "成功！")
 
-
     du.HEADERS['duloginToken'] = loginToken
     du.COOKIES = cookie
 
@@ -71,7 +71,7 @@ def login(force=False):
 # 访问链接
 def fetch(url):
     i = 1
-    while i <= 3:
+    while i <= 1:
         try:
             ret = requests.get(url, headers=du.HEADERS, cookies=du.COOKIES, timeout=30)
 
@@ -110,8 +110,8 @@ def getChange():
         return False
 
     for v in list:
-        print("开始爬取", "商品id：", v)
-        getDetail(v)
+        print("开始爬取", "商品id：", v['product_id'])
+        getDetail(v['product_id'])
 
     return
 
