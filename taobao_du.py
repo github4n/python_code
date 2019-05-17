@@ -1,9 +1,24 @@
 import common.function as myFunc
+import common.conf as conf
 import mongo_du as du
-import requests, arrow, time, hashlib
+import requests, arrow, time, pymysql
 
 # 当前时间
 now_time = arrow.get(arrow.now().timestamp).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')
+
+database = {
+    "host": '144.48.9.105',
+    "port": 3306,
+    "user": 'rank666_com',
+    "passwd": 'RdPK775JrWY3Psnb',
+    "db": 'rank666_com',
+    "charset": 'utf8',
+}
+
+db = pymysql.connect(host=database['host'], port=database['port'],
+                     user=database['user'], password=database['passwd'],
+                     db=database['db'], charset='utf8')
+cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
 
 
 def login(force=False):
@@ -87,7 +102,13 @@ def getChange():
     login()
 
     # 去重 获取所有的商品ID
-    list = du.db_change.distinct("product_id")
+    sql = 'SELECT DISTINCT lt_taobao.product_id FROM `lt_taobao`'
+    cursor.execute(sql)
+    list = cursor.fetchall()
+    if not list:
+        print("获取列表为空")
+        return False
+
     for v in list:
         print("开始爬取", "商品id：", v)
         getDetail(v)
