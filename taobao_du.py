@@ -59,7 +59,9 @@ def fetch(url):
 
             if ret.json()['status'] != 200:
                 print("接口错误", ret.json()['msg'])
-                login(True)
+                if ret.json()['status'] == 700:
+                    print("登录过期", "开始重新登录")
+                    login(True)
                 i += 1
                 continue
 
