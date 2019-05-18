@@ -148,7 +148,7 @@ def edit(driver, change_info):
         price = str(v['price'] / 100).replace('.0', '')
         price_list[size] = price
 
-    price_log = []
+    price_log = {}
 
     # 一口价
     yikou_price = {}
@@ -209,7 +209,7 @@ def edit(driver, change_info):
             # 记录价格变动修改
             edit_log = "毒：" + str(price_list[dom_size]) + "  " + str(old_price) + ' ▶▶▶▶ ' + str(
                 new_price) + "  尺码：" + str(dom_size)
-            price_log.append(edit_log)
+            price_log[dom_size] = edit_log
 
             # 记录一口价
             if int(sold) > 0:
@@ -248,7 +248,7 @@ def edit(driver, change_info):
         EC.presence_of_element_located((By.XPATH, '//*[@id="J_Title"]'))
     )
 
-    for v in price_log:
+    for k, v in price_log.items():
         msg("价格变动", "成功", v, False)
 
     print("-----------------------------------------")
@@ -269,7 +269,7 @@ def startChrom():
     # 不加载图片, 提升速度
     option.add_argument('blink-settings=imagesEnabled=false')
     # 后台运行
-    # option.add_argument('headless')
+    option.add_argument('headless')
     # 关闭console的信息输出
     option.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
