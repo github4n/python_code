@@ -148,53 +148,89 @@ def edit(driver, change_info):
         price = str(v['price'] / 100).replace('.0', '')
         price_list[size] = price
 
-    num = 0
     price_log = []
 
-    goods_no_list = driver.find_elements_by_xpath("//div[@class='stretch']/table/tbody/tr/td[1]/div/div/p")
-    for v in goods_no_list:
-        goods_no_name = v.get_attribute('title')
-        # 判断货号是否存在于这个里面
-        if str(change_info['article_number']) not in str(goods_no_name):
-            num += 1
-            continue
+    # 一口价
+    yikou_price = {}
 
+    for i in range(1, 10):
+        index = 0
 
-        size = driver.find_elements_by_xpath("//div[@class='stretch']/table/tbody/tr/td[2]/div/div/p")[num].text
-        dom_size = str(size)
-        # 判断尺码在修改黑名单列表里 则跳过
-        if change_info['size_list']:
-            if dom_size in change_info['size_list']:
-                num += 1
+        xpath_str2 = "//td[@class='sell-sku-cell sell-sku-cell-money']/div/span/span/span/input"
+        dom_size_list = driver.find_elements_by_xpath(xpath_str2)
+        for v in dom_size_list:
+            # 价格
+            old_price = v.get_attribute('value')
+            # 货号
+            goods_no = driver.find_elements_by_xpath(
+                "//tr[@class='sku-table-row']/td[1]/div/div/p")[index].get_attribute('title')
+            # 尺码
+            size = driver.find_elements_by_xpath(
+                "//tr[@class='sku-table-row']/td[2]/div/div/p")[index].get_attribute('title')
+            # 销量
+            sold = driver.find_elements_by_xpath(
+                "//tr[@class='sku-table-row']/td[4]/div/span/span/span/input")[index].get_attribute('value')
+
+            # 记录一口价
+            if int(sold) > 0:
+                yikou_price[size] = int(old_price.replace('.00', ''))
+
+            dom_size = str(size)
+
+            # 判断货号一致性
+            if change_info['article_number'] not in goods_no:
+                # print("修改货号：", change_info['article_number'], "淘宝sku名称：", goods_no)
+                index += 1
                 continue
 
+            # 判断尺码在修改黑名单列表里 则跳过
+            if change_info['size_list']:
+                if dom_size in change_info['size_list']:
+                    index += 1
+                    continue
 
-        # 判断尺码价格是否有价格
-        if dom_size not in price_list:
-            msg("获取毒的尺码价格", "数据为空", "跳过尺码：" + dom_size, False)
-            num += 1
-            continue
+            # 判断尺码价格是否有价格
+            if dom_size not in price_list:
+                # msg("获取尺码价格", "没有毒数据", "跳过尺码：" + dom_size, False)
+                index += 1
+                continue
 
-        index = num + 1
-        # 获取原价格
-        old_price = driver.find_elements_by_xpath("//input[@name='skuPrice']")[index].get_attribute('value')
+            # 清除 input 的值
+            v.clear()
 
-        # 清除 input 的值
-        driver.find_elements_by_xpath("//input[@name='skuPrice']")[index].clear()
+            # 填写最新价格
+            new_price = int(price_list[dom_size]) + int(change_info['price'])
+            v.send_keys(new_price)
 
-        # 填写最新价格
-        new_price = int(price_list[dom_size]) + int(change_info['price'])
-        driver.find_elements_by_xpath("//input[@name='skuPrice']")[index].send_keys(new_price)
+            # 通过聚焦使用 阿里自带 JS 修改一口价
+            js = "document.getElementById('price').focus()"
+            driver.execute_script(js)
 
-        # 记录价格变动修改
-        edit_log = "毒：" + str(price_list[dom_size]) + "  " + str(old_price) + ' ▶▶▶▶ ' + str(new_price) + "  尺码：" + str(dom_size)
-        price_log.append(edit_log)
+            # 记录价格变动修改
+            edit_log = "毒：" + str(price_list[dom_size]) + "  " + str(old_price) + ' ▶▶▶▶ ' + str(
+                new_price) + "  尺码：" + str(dom_size)
+            price_log.append(edit_log)
 
-        num += 1
+            # 记录一口价
+            if int(sold) > 0:
+                yikou_price[size] = new_price
 
-    # 通过聚焦使用 阿里自带 JS 修改一口价
-    js = "document.getElementById('price').focus()"
-    driver.execute_script(js)
+            index += 1
+
+        # 滚动页面
+        scrollTop = 40 + (i * 560)
+        js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
+        driver.execute_script(js)
+        time.sleep(0.5)
+
+    # 填写一口价
+    if not yikou_price:
+        print("货号：", change_info['article_number'], "所有库存为 0，不修改价格")
+    else:
+        min_price = max(yikou_price.values())
+        print("货号：", change_info['article_number'], "设置一口价：", min_price)
+    driver.find_element_by_xpath("//input[@id='price']").clear()
+    driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
 
     # 提交表单
     driver.find_elements_by_xpath("//button[@id='button-submit']")[0].click()
@@ -223,6 +259,7 @@ def edit(driver, change_info):
 def startChrom():
     # 账号登录
     user_id = rankLogin()
+    # user_id = 4
 
     # 加启动配置
     option = webdriver.ChromeOptions()
@@ -232,7 +269,7 @@ def startChrom():
     # 不加载图片, 提升速度
     option.add_argument('blink-settings=imagesEnabled=false')
     # 后台运行
-    option.add_argument('headless')
+    # option.add_argument('headless')
     # 关闭console的信息输出
     option.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
@@ -298,7 +335,6 @@ def startChrom():
             next_time = arrow.now().timestamp + (60 * time_edit_set)
             next_time_str = arrow.get(next_time).to('local').format('YYYY-MM-DD HH:mm:ss')
             msg("批量修改", "成功", "下次启动时间：" + str(next_time_str))
-
 
         time.sleep(1)
         time_refresh += 1
