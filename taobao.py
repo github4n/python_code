@@ -223,7 +223,7 @@ def edit(driver, change_info):
         driver.execute_script(js)
         time.sleep(0.5)
 
-    # 填写一口价
+    # 填写一口价 a
     if not yikou_price:
         print("货号：", change_info['article_number'], "所有库存为 0，不修改价格")
     else:
