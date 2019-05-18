@@ -269,7 +269,7 @@ def startChrom():
     # 不加载图片, 提升速度
     option.add_argument('blink-settings=imagesEnabled=false')
     # 后台运行
-    option.add_argument('headless')
+    # option.add_argument('headless')
     # 关闭console的信息输出
     option.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
