@@ -11,13 +11,6 @@ import common.function as myFunc
 import common.conf as conf
 import time, pymongo, arrow, pymysql, hashlib
 
-# 连接mongodb
-myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
-mydb = myclient["du"]
-
-db_price = mydb["price"]
-db_change = mydb["change"]
-
 database = {
     "host": '144.48.9.105',
     "port": 3306,
@@ -27,13 +20,20 @@ database = {
     "charset": 'utf8',
 }
 
-db = pymysql.connect(host=database['host'], port=database['port'],
-                     user=database['user'], password=database['passwd'],
-                     db=database['db'], charset='utf8')
-cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
-
 
 def rankLogin():
+    while True:
+        try:
+            db = pymysql.connect(host=database['host'], port=database['port'],
+                                 user=database['user'], password=database['passwd'],
+                                 db=database['db'], charset='utf8')
+            cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
+            break
+        except:
+            print("数据连接超时，正在重连...")
+            time.sleep(5)
+            continue
+
     username = ''
     password = ''
     password_num = 1
@@ -101,6 +101,18 @@ def rankLogin():
 
 # 获取需要修改价格的列表
 def getChange(user_id):
+    while True:
+        try:
+            db = pymysql.connect(host=database['host'], port=database['port'],
+                                 user=database['user'], password=database['passwd'],
+                                 db=database['db'], charset='utf8')
+            cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
+            break
+        except:
+            print("数据连接超时，正在重连...")
+            time.sleep(5)
+            continue
+
     where = {
         'user_id': user_id,
     }
@@ -123,6 +135,11 @@ def getChange(user_id):
 
 
 def edit(driver, change_info):
+    # 连接mongodb
+    myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
+    mydb = myclient["du"]
+
+    db_price = mydb["price"]
     # 跳转商品编辑页面
     driver.get('https://item.publish.taobao.com/sell/publish.htm?itemId=' + str(change_info['taobao_id']))
 
@@ -154,28 +171,39 @@ def edit(driver, change_info):
     yikou_price = {}
 
     for i in range(1, 10):
+        time.sleep(0.5)
+
         index = 0
 
-        xpath_str2 = "//td[@class='sell-sku-cell sell-sku-cell-money']/div/span/span/span/input"
-        dom_size_list = driver.find_elements_by_xpath(xpath_str2)
+        # 价格节点
+        xpath_str1 = "//td[@class='sell-sku-cell sell-sku-cell-money']/div/span/span/span/input"
+        dom_size_list = driver.find_elements_by_xpath(xpath_str1)
+        # 货号节点
+        xpath_str2 = "//tr[@class='sku-table-row']/td[1]/div/div/p"
+        goods_no_list = driver.find_elements_by_xpath(xpath_str2)
+
+        # 尺码节点
+        xpath_str3 = "//tr[@class='sku-table-row']/td[2]/div/div/p"
+        size_list = driver.find_elements_by_xpath(xpath_str3)
+
+        # 销量节点
+        xpath_str4 = "//tr[@class='sku-table-row']/td[4]/div/span/span/span/input"
+        sold_list = driver.find_elements_by_xpath(xpath_str4)
+
         for v in dom_size_list:
             # 价格
             old_price = v.get_attribute('value')
             # 货号
-            goods_no = driver.find_elements_by_xpath(
-                "//tr[@class='sku-table-row']/td[1]/div/div/p")[index].get_attribute('title')
+            goods_no = goods_no_list[index].get_attribute('title')
             # 尺码
-            size = driver.find_elements_by_xpath(
-                "//tr[@class='sku-table-row']/td[2]/div/div/p")[index].get_attribute('title')
+            size = size_list[index].get_attribute('title')
+            dom_size = str(size)
             # 销量
-            sold = driver.find_elements_by_xpath(
-                "//tr[@class='sku-table-row']/td[4]/div/span/span/span/input")[index].get_attribute('value')
+            sold = sold_list[index].get_attribute('value')
 
             # 记录一口价
             if int(sold) > 0:
                 yikou_price[size] = int(old_price.replace('.00', ''))
-
-            dom_size = str(size)
 
             # 判断货号一致性
             if change_info['article_number'] not in goods_no:
@@ -207,7 +235,8 @@ def edit(driver, change_info):
             driver.execute_script(js)
 
             # 记录价格变动修改
-            edit_log = "毒：" + str(price_list[dom_size]) + "  " + str(old_price) + ' ▶▶▶▶ ' + str(
+            edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
+                old_price) + ' ▶▶▶▶ ' + str(
                 new_price) + "  尺码：" + str(dom_size)
             price_log[dom_size] = edit_log
 
@@ -221,13 +250,13 @@ def edit(driver, change_info):
         scrollTop = 40 + (i * 560)
         js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
         driver.execute_script(js)
-        time.sleep(0.5)
 
-    # 填写一口价 a
+    # 填写一口价
     if not yikou_price:
         print("货号：", change_info['article_number'], "所有库存为 0，不修改价格")
+        return False
     else:
-        min_price = max(yikou_price.values())
+        min_price = min(yikou_price.values())
         print("货号：", change_info['article_number'], "设置一口价：", min_price)
     driver.find_element_by_xpath("//input[@id='price']").clear()
     driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
@@ -247,9 +276,11 @@ def edit(driver, change_info):
     WebDriverWait(driver, 20, 0.5).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="J_Title"]'))
     )
-
-    for k, v in price_log.items():
-        msg("价格变动", "成功", v, False)
+    if not price_log:
+        print("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
+    else:
+        for k, v in price_log.items():
+            msg("价格变动", "成功", v, False)
 
     print("-----------------------------------------")
 
@@ -269,7 +300,7 @@ def startChrom():
     # 不加载图片, 提升速度
     option.add_argument('blink-settings=imagesEnabled=false')
     # 后台运行
-    # option.add_argument('headless')
+    option.add_argument('headless')
     # 关闭console的信息输出
     option.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
@@ -285,7 +316,9 @@ def startChrom():
             url = 'https://login.taobao.com/member/login.jhtml?redirectURL=http%3A%2F%2Fsell.taobao.com%2Fauction%2Fgoods%2Fgoods_on_sale.htm%3Fspm%3Da21bo.2017.1997525073.4.5af911d96XwPw7'
             driver.get(url)
 
-            msg('扫码登录', "等待", "请在 60秒 内， 扫描二维码登录！ 如果二维码超时，请重启程序！")
+            msg('扫码登录', "等待", "请在 60秒 内， 扫描二维码登录！")
+            msg('扫码登录', "等待", "如果二维码超时，请重启程序！")
+            msg('扫码登录', "等待", "登录后，关闭二维码图片才能执行程序！")
 
             # 等待 二维码
             qrcode = WebDriverWait(driver, 30, 0.5).until(
@@ -318,7 +351,6 @@ def startChrom():
     time_edit = 600
     time_edit_set = 10
     while True:
-
         # 刷新页面 保持登录状态
         if time_refresh >= (60 * time_refresh_set):
             driver.refresh()
