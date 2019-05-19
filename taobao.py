@@ -261,8 +261,12 @@ def edit(driver, change_info):
     driver.find_element_by_xpath("//input[@id='price']").clear()
     driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
 
+    WebDriverWait(driver, 20, 0.5).until(
+        EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
+    )
+
     # 提交表单
-    driver.find_elements_by_xpath("//button[@id='button-submit']")[0].click()
+    driver.find_element_by_xpath("//button[@id='button-submit']").click()
 
     # 监听是否有错误
     submit_error = driver.find_elements_by_xpath("//div[@class='sell-error-board ']/ul/li[1]")
@@ -300,7 +304,7 @@ def startChrom():
     # 不加载图片, 提升速度
     option.add_argument('blink-settings=imagesEnabled=false')
     # 后台运行
-    option.add_argument('headless')
+    # option.add_argument('headless')
     # 关闭console的信息输出
     option.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
@@ -348,8 +352,8 @@ def startChrom():
     time_refresh = 0
     time_refresh_set = 5
     # 价格修改时间 10分钟
-    time_edit = 600
-    time_edit_set = 10
+    time_edit = 1200
+    time_edit_set = 20
     while True:
         # 刷新页面 保持登录状态
         if time_refresh >= (60 * time_refresh_set):
@@ -374,7 +378,7 @@ def startChrom():
 
 
 def msg(name, status, content, line=True):
-    msg_time = arrow.get(arrow.now().timestamp).format('YYYY-MM-DD HH:mm:ss')
+    msg_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
     print(msg_time, "[" + name + "]：", status, content)
     if line:
         print("-----------------------------------------")
