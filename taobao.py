@@ -9,7 +9,7 @@ from io import BytesIO
 
 import common.function as myFunc
 import common.conf as conf
-import time, pymongo, arrow, pymysql, hashlib
+import time, pymongo, arrow, pymysql, hashlib, traceback
 
 database = {
     "host": '144.48.9.105',
@@ -30,6 +30,7 @@ def rankLogin():
             cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
             break
         except:
+            traceback.print_exc()
             print("数据连接超时，正在重连...")
             time.sleep(5)
             continue
@@ -101,7 +102,8 @@ def rankLogin():
 
 # 获取需要修改价格的列表
 def getChange(user_id):
-    while True:
+    mysql_num = 1
+    while mysql_num <= 3:
         try:
             db = pymysql.connect(host=database['host'], port=database['port'],
                                  user=database['user'], password=database['passwd'],
@@ -109,8 +111,9 @@ def getChange(user_id):
             cursor = db.cursor(cursor=pymysql.cursors.DictCursor)
             break
         except:
-            print("数据连接超时，正在重连...")
+            msg("脚本初始化", "失败", "正在重置 第 " + str(mysql_num) + " 次")
             time.sleep(5)
+            mysql_num += 1
             continue
 
     where = {
@@ -134,167 +137,180 @@ def getChange(user_id):
     return list
 
 
-def edit(driver, change_info):
-    # 连接mongodb
-    myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
-    mydb = myclient["du"]
+def edit(driver, change_info, myclient):
+    try:
+        mydb = myclient["du"]
 
-    db_price = mydb["price"]
-    # 跳转商品编辑页面
-    driver.get('https://item.publish.taobao.com/sell/publish.htm?itemId=' + str(change_info['taobao_id']))
+        db_price = mydb["price"]
+        # 跳转商品编辑页面
+        driver.get('https://item.publish.taobao.com/sell/publish.htm?itemId=' + str(change_info['taobao_id']))
 
-    # 判断宝贝是否还存在
-    is_have = driver.find_elements_by_xpath("//div[@class='feedback-notice-hd']")
-    if is_have:
-        msg("宝贝判断", "不存在", "请从改价列表中删除 淘宝ID：" + str(change_info['taobao_id']))
-        return False
+        # 判断宝贝是否还存在
+        is_have = driver.find_elements_by_xpath("//div[@class='feedback-notice-hd']")
+        if is_have:
+            msg("宝贝判断", "不存在", "请从改价列表中删除 淘宝ID：" + str(change_info['taobao_id']))
+            return False
 
-    # 获取鞋子价格
-    ret_price = db_price.find({
-        'articleNumber': change_info['article_number'],
-    }, {'size', 'price'})
+        # 获取鞋子价格
+        ret_price = db_price.find({
+            'articleNumber': change_info['article_number'],
+        }, {'size', 'price'})
 
-    if not ret_price:
-        msg("获取毒的价格", "数据为空", "跳过货号" + str(change_info['article_number']))
-        return False
+        if not ret_price:
+            msg("获取毒的价格", "数据为空", "跳过货号" + str(change_info['article_number']))
+            return False
 
-    # 重构鞋子价格数组
-    price_list = {}
-    for v in ret_price:
-        size = str(v['size']).replace('.0', '')
-        price = str(v['price'] / 100).replace('.0', '')
-        price_list[size] = price
+        # 重构鞋子价格数组
+        price_list = {}
+        for v in ret_price:
+            size = str(v['size']).replace('.0', '')
+            price = str(v['price'] / 100).replace('.0', '')
+            price_list[size] = price
 
-    price_log = {}
+        price_log = {}
 
-    # 一口价
-    yikou_price = {}
+        # 一口价
+        yikou_price = {}
 
-    for i in range(1, 10):
-        time.sleep(0.5)
+        for i in range(1, 10):
+            time.sleep(0.5)
 
-        index = 0
+            index = 0
 
-        # 价格节点
-        xpath_str1 = "//td[@class='sell-sku-cell sell-sku-cell-money']/div/span/span/span/input"
-        dom_size_list = driver.find_elements_by_xpath(xpath_str1)
-        # 货号节点
-        xpath_str2 = "//tr[@class='sku-table-row']/td[1]/div/div/p"
-        goods_no_list = driver.find_elements_by_xpath(xpath_str2)
+            # 价格节点
+            xpath_str1 = "//td[@class='sell-sku-cell sell-sku-cell-money']/div/span/span/span/input"
+            dom_size_list = driver.find_elements_by_xpath(xpath_str1)
+            # 货号节点
+            xpath_str2 = "//tr[@class='sku-table-row']/td[1]/div/div/p"
+            goods_no_list = driver.find_elements_by_xpath(xpath_str2)
 
-        # 尺码节点
-        xpath_str3 = "//tr[@class='sku-table-row']/td[2]/div/div/p"
-        size_list = driver.find_elements_by_xpath(xpath_str3)
+            # 尺码节点
+            xpath_str3 = "//tr[@class='sku-table-row']/td[2]/div/div/p"
+            size_list = driver.find_elements_by_xpath(xpath_str3)
 
-        # 销量节点
-        xpath_str4 = "//tr[@class='sku-table-row']/td[4]/div/span/span/span/input"
-        sold_list = driver.find_elements_by_xpath(xpath_str4)
+            # 销量节点
+            xpath_str4 = "//tr[@class='sku-table-row']/td[4]/div/span/span/span/input"
+            sold_list = driver.find_elements_by_xpath(xpath_str4)
 
-        for v in dom_size_list:
-            # 价格
-            old_price = v.get_attribute('value')
-            # 货号
-            goods_no = goods_no_list[index].get_attribute('title')
-            # 尺码
-            size = size_list[index].get_attribute('title')
-            dom_size = str(size)
-            # 销量
-            sold = sold_list[index].get_attribute('value')
+            for v in dom_size_list:
+                # 价格
+                old_price = v.get_attribute('value')
+                # 货号
+                goods_no = goods_no_list[index].get_attribute('title')
+                # 尺码
+                size = size_list[index].get_attribute('title')
+                dom_size = str(size)
+                # 销量
+                sold = sold_list[index].get_attribute('value')
 
-            # 记录一口价
-            if int(sold) > 0:
-                yikou_price[size] = int(old_price.replace('.00', ''))
+                # 记录一口价
+                if int(sold) > 0:
+                    yikou_price[size] = int(old_price.replace('.00', ''))
 
-            # 判断货号一致性
-            if change_info['article_number'] not in goods_no:
-                # print("修改货号：", change_info['article_number'], "淘宝sku名称：", goods_no)
-                index += 1
-                continue
-
-            # 判断尺码在修改黑名单列表里 则跳过
-            if change_info['size_list']:
-                if dom_size in change_info['size_list']:
+                # 判断货号一致性
+                if change_info['article_number'] not in goods_no:
+                    # print("修改货号：", change_info['article_number'], "淘宝sku名称：", goods_no)
                     index += 1
                     continue
 
-            # 判断尺码价格是否有价格
-            if dom_size not in price_list:
-                # msg("获取尺码价格", "没有毒数据", "跳过尺码：" + dom_size, False)
+                # 判断尺码在修改黑名单列表里 则跳过
+                if change_info['size_list']:
+                    if dom_size in change_info['size_list']:
+                        index += 1
+                        continue
+
+                # 判断尺码价格是否有价格
+                if dom_size not in price_list:
+                    # msg("获取尺码价格", "没有毒数据", "跳过尺码：" + dom_size, False)
+                    index += 1
+                    continue
+
+                # 清除 input 的值
+                v.clear()
+
+                # 填写最新价格
+                new_price = int(price_list[dom_size]) + int(change_info['price'])
+                v.send_keys(new_price)
+
+                # 通过聚焦使用 阿里自带 JS 修改一口价
+                js = "document.getElementById('price').focus()"
+                driver.execute_script(js)
+
+                # 记录价格变动修改
+                edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
+                    old_price) + ' ▶▶▶▶ ' + str(
+                    new_price) + "  尺码：" + str(dom_size)
+                price_log[dom_size] = edit_log
+
+                # 记录一口价
+                if int(sold) > 0:
+                    yikou_price[size] = new_price
+
                 index += 1
-                continue
 
-            # 清除 input 的值
-            v.clear()
-
-            # 填写最新价格
-            new_price = int(price_list[dom_size]) + int(change_info['price'])
-            v.send_keys(new_price)
-
-            # 通过聚焦使用 阿里自带 JS 修改一口价
-            js = "document.getElementById('price').focus()"
+            # 滚动页面
+            scrollTop = 40 + (i * 560)
+            js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
             driver.execute_script(js)
 
-            # 记录价格变动修改
-            edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
-                old_price) + ' ▶▶▶▶ ' + str(
-                new_price) + "  尺码：" + str(dom_size)
-            price_log[dom_size] = edit_log
+        # 填写一口价
+        if not yikou_price:
+            msg("填写一口价", "货号：" + str(change_info['article_number']), "所有库存为 0，不修改价格")
+            return False
+        else:
+            min_price = min(yikou_price.values())
+            msg("填写一口价", "货号：" + str(change_info['article_number']), "设置一口价：" + str(min_price))
+        driver.find_element_by_xpath("//input[@id='price']").clear()
+        driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
 
-            # 记录一口价
-            if int(sold) > 0:
-                yikou_price[size] = new_price
+        WebDriverWait(driver, 20, 0.5).until(
+            EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
+        )
+        # 提交表单
+        driver.find_element_by_xpath("//button[@id='button-submit']").click()
 
-            index += 1
+        # 监听是否有错误
+        submit_error = driver.find_elements_by_xpath("//div[@class='sell-error-board ']/ul/li[1]")
+        if not submit_error:
+            msg("确认提交修改信息", "成功", "成功")
+        else:
+            submit_error = submit_error[0].text
+            msg("确认提交修改信息", "失败", submit_error)
 
-        # 滚动页面
-        scrollTop = 40 + (i * 560)
-        js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
-        driver.execute_script(js)
+        # 防止没有提交成功 三次提交
+        click_num = 1
+        while click_num <= 3:
+            try:
+                # 等待 修改成功后跳转到 宝贝页面
+                WebDriverWait(driver, 20, 0.5).until(
+                    EC.presence_of_element_located((By.XPATH, '//*[@id="J_Title"]'))
+                )
+                break
+            except:
+                traceback.print_exc()
+                msg("确认提交修改信息", "重试", "第" + str(click_num) + "次")
+                time.sleep(1)
+                driver.find_element_by_xpath("//button[@id='button-submit']").click()
+                click_num += 1
 
-    # 填写一口价
-    if not yikou_price:
-        print("货号：", change_info['article_number'], "所有库存为 0，不修改价格")
-        return False
-    else:
-        min_price = min(yikou_price.values())
-        print("货号：", change_info['article_number'], "设置一口价：", min_price)
-    driver.find_element_by_xpath("//input[@id='price']").clear()
-    driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
+        if not price_log:
+            msg("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
+        else:
+            for k, v in price_log.items():
+                msg("价格变动", "成功", v, False)
 
-    WebDriverWait(driver, 20, 0.5).until(
-        EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
-    )
+        print("-----------------------------------------")
 
-    # 提交表单
-    driver.find_element_by_xpath("//button[@id='button-submit']").click()
-
-    # 监听是否有错误
-    submit_error = driver.find_elements_by_xpath("//div[@class='sell-error-board ']/ul/li[1]")
-    if not submit_error:
-        msg("确认提交修改信息", "成功", "成功")
-    else:
-        submit_error = submit_error[0].text
-        msg("确认提交修改信息", "失败", submit_error)
-
-    # 等待 修改成功后跳转到 宝贝页面
-    WebDriverWait(driver, 20, 0.5).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="J_Title"]'))
-    )
-    if not price_log:
-        print("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
-    else:
-        for k, v in price_log.items():
-            msg("价格变动", "成功", v, False)
-
-    print("-----------------------------------------")
-
-    return True
+        return True
+    except:
+        traceback.print_exc()
 
 
 def startChrom():
     # 账号登录
     user_id = rankLogin()
     # user_id = 4
+    # user_id = 147
 
     # 加启动配置
     option = webdriver.ChromeOptions()
@@ -363,9 +379,23 @@ def startChrom():
         # 修改价格
         if time_edit >= (60 * time_edit_set):
             change_list = getChange(user_id)
+
+            # mongo重连
+            mongo_num = 1
+            while mongo_num <= 3:
+                try:
+                    # 连接mongodb
+                    myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
+                    break
+                except:
+                    print("初始化", "失败", "重连 " + str(mongo_num) + "次")
+                    mongo_num += 1
+                    time.sleep(5)
+                    continue
+
             for v in change_list:
                 msg("修改价格", "开始", v['article_number'] + ' ' + v['title'])
-                edit(driver, v)
+                edit(driver, v, myclient)
             time_edit = 0
 
             next_time = arrow.now().timestamp + (60 * time_edit_set)
