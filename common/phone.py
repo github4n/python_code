@@ -47,7 +47,7 @@ class Phone:
             req = requests.get(Phone.host, params=params)
 
             if req.status_code != 200:
-                print("【获取短信】接口异常")
+                print("【获取短信】接口异常:", req.status_code)
                 return False
 
             if req.text == '3001':
@@ -98,15 +98,16 @@ class Phone:
         return True
 
     # 拉黑手机号
-    def ignore(self, phone, itemid):
+    @staticmethod
+    def ignore(phone, itemid):
         params = {
             'action': 'addignore',
-            'token': self.token,
+            'token': Phone.token,
             'itemid': str(itemid),
             'mobile': str(phone),
         }
 
-        req = requests.get(self.host, params=params)
+        req = requests.get(Phone.host, params=params)
 
         if req.status_code != 200:
             print("【拉黑手机号】接口异常")
@@ -115,5 +116,7 @@ class Phone:
         if 'success' not in req.text:
             print("【拉黑手机号】接口失败")
             return False
+
+        print("【拉黑手机号】：", phone)
 
         return True
