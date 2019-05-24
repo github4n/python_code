@@ -12,7 +12,7 @@ import common.phone as phoneSdk
 import common.randName as nameSdk
 import time, random, arrow, threading
 
-import requests, pymongo, queue,traceback
+import requests, pymongo, queue, traceback
 from multiprocessing import Pool, Queue
 
 PROXIES_API = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
@@ -84,11 +84,6 @@ def register(db_nike):
 
         timeout = 30
         now_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
-        capabilities = dict(DesiredCapabilities.CHROME)
-        capabilities['proxy'] = {'proxyType': 'MANUAL',
-                                 'httpProxy': getProxies(),
-                                 'class': "org.openqa.selenium.Proxy",
-                                 'autodetect': False}
 
         # 加启动配置
         option = webdriver.ChromeOptions()
@@ -100,16 +95,17 @@ def register(db_nike):
         # option.add_argument('headless')
         # 开启实验性功能参数
         # option.add_experimental_option('excludeSwitches', ['enable-automation'])
+        proxies = getProxies()
 
-        driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', desired_capabilities=capabilities,
+        option.add_argument('proxy-server=' + proxies)
+
+        driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe',
                                   chrome_options=option)
         # driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
         # 窗口最大化
         driver.maximize_window()
 
         driver.get('https://www.nike.com/cn/zh_cn/s/register')
-
-        time.sleep(10)
 
         # 点击立即加入
         xpath = "//a[text()='立即加入。']"
@@ -207,16 +203,24 @@ def register(db_nike):
         driver.find_element_by_xpath(xpath).click()
         print("【点击跳过 这样才能登陆】")
 
-        # 跳转地址设置
-        driver.get("https://www.nike.com/member/settings/addresses")
-        print("【跳转地址设置】")
+        num = 1
+        while num <= 3:
+            try:
+                # 跳转地址设置
+                driver.get("https://www.nike.com/member/settings/addresses")
+                print("【跳转地址设置】")
 
-        # 点击添加配送地址
-        xpath = "//*[@class='ncss-btn-secondary-dark d-sm-h d-md-ib']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_elements_by_xpath(xpath)[2].click()
-        print("【点击添加配送地址】")
+                # 点击添加配送地址
+                xpath = "//*[@class='ncss-btn-secondary-dark d-sm-h d-md-ib']"
+                WebDriverWait(driver, timeout, 0.5).until(
+                    EC.element_to_be_clickable((By.XPATH, xpath)))
+                driver.find_elements_by_xpath(xpath)[2].click()
+                print("【点击添加配送地址】")
+                break
+            except:
+                time.sleep(1)
+                num += 1
+                continue
 
         # 设置默认配送地址
         xpath = "//*[text()='将其设为我的默认配送地址']"
@@ -229,6 +233,9 @@ def register(db_nike):
         xpath = "//input[@name='姓氏']"
         WebDriverWait(driver, timeout, 0.5).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
+        driver.find_element_by_xpath(xpath).send_keys(name['xm'])
+        time.sleep(1)
+        driver.find_element_by_xpath(xpath).clear()
         driver.find_element_by_xpath(xpath).send_keys(name['xm'])
         time.sleep(1)
         driver.find_element_by_xpath(xpath).clear()
@@ -368,7 +375,6 @@ if __name__ == '__main__':
     myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
     mydb = myclient["du"]
     db_nike = mydb["nike"]
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=5) as pool:
         for i in range(200):
             future1 = pool.submit(register, db_nike)
-
