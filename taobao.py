@@ -140,8 +140,8 @@ def getChange(user_id):
 def edit(driver, change_info, myclient):
     try:
         mydb = myclient["du"]
-
         db_price = mydb["price"]
+
         # 跳转商品编辑页面
         driver.get('https://item.publish.taobao.com/sell/publish.htm?itemId=' + str(change_info['taobao_id']))
 
@@ -253,6 +253,16 @@ def edit(driver, change_info, myclient):
             js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
             driver.execute_script(js)
 
+        # 判断是否有价格变动信息 没有代表sku货号不存在
+        if not price_log:
+            msg("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
+            return False
+        else:
+            for k, v in price_log.items():
+                msg("价格变动", "成功", v, False)
+
+        print("-----------------------------------------")
+
         # 填写一口价
         if not yikou_price:
             msg("填写一口价", "货号：" + str(change_info['article_number']), "所有库存为 0，不修改价格")
@@ -272,14 +282,15 @@ def edit(driver, change_info, myclient):
         # 监听是否有错误
         submit_error = driver.find_elements_by_xpath("//div[@class='sell-error-board ']/ul/li[1]")
         if not submit_error:
-            msg("确认提交修改信息", "成功", "成功")
+            msg("表单提交修改信息", "成功", "成功")
         else:
             submit_error = submit_error[0].text
-            msg("确认提交修改信息", "失败", submit_error)
+            msg("表单提交修改信息", "失败", submit_error)
 
-        # 防止没有提交成功 三次提交
+
+        # 防止没有提交成功 一直提交
         click_num = 1
-        while click_num <= 3:
+        while True:
             try:
                 # 等待 修改成功后跳转到 宝贝页面
                 WebDriverWait(driver, 20, 0.5).until(
@@ -290,16 +301,12 @@ def edit(driver, change_info, myclient):
                 traceback.print_exc()
                 msg("确认提交修改信息", "重试", "第" + str(click_num) + "次")
                 time.sleep(1)
+                # 提交按钮
                 driver.find_element_by_xpath("//button[@id='button-submit']").click()
+
                 click_num += 1
 
-        if not price_log:
-            msg("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
-        else:
-            for k, v in price_log.items():
-                msg("价格变动", "成功", v, False)
 
-        print("-----------------------------------------")
 
         return True
     except:
@@ -362,6 +369,7 @@ def startChrom():
         except:
             print("登录失败或超时，请重新扫码登录！")
             i += 1
+            time.sleep(1)
             continue
 
     # 页面刷新时间  5分钟

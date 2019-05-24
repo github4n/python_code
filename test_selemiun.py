@@ -1,3 +1,4 @@
+import ys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -23,6 +24,18 @@ def getProxies():
     return ret.text
 
 
+ys.setBypass()
+
+while True:
+    if not ys.BYPASS_LIST.empty():
+        bypass = ys.BYPASS_LIST.get()
+        if not bypass:
+            ys.reqMsg("没有BYPASS了", 404, '没有BYPASS了', '没有BYPASS了')
+        break
+    else:
+        time.sleep(1)
+        continue
+
 capabilities = dict(DesiredCapabilities.CHROME)
 # capabilities['proxy'] = {'proxyType': 'MANUAL',
 #                          'httpProxy': getProxies(),
@@ -42,10 +55,20 @@ option.add_argument('disable-infobars')
 #                           chrome_options=option)
 driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe', chrome_options=option)
 
+
+
 # 隐式等待
 driver.implicitly_wait(2)
 
-driver.get('http://rank666.com/index/index/captcha2')
+driver.get(bypass['url'])
+
+for k,v in bypass['cookies'].items():
+    driver.add_cookie({'name': str(k), 'value':str(v)})
+
+driver.get(bypass['url'])
+
+
+
 # driver.get('http://www.baidu.com')
 
 # element = WebDriverWait(driver, 10, 0.5).until(
@@ -68,7 +91,6 @@ driver.get('http://rank666.com/index/index/captcha2')
 # driver.switch_to_frame(iframe2)
 # time.sleep(2)
 # driver.find_element_by_xpath('//*[@id="recaptcha-audio-button"]').click()
-
 
 
 # driver.quit()

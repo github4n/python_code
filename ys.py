@@ -8,7 +8,7 @@ from multiprocessing import Pool, Queue
 
 ''' 初始设置 '''
 # 设置要购买的鞋子名称
-SEARCH_NAME = 'flannel-lined-canvas-jacket-medium-blue'
+SEARCH_NAME = 'yeezy-boost-350-v2-glow-soon-so'
 
 # 设置购买尺码
 buy_size = ['L', 'M']
@@ -192,7 +192,7 @@ def getPaymentToken(req, auth_token):
                 "credit_card": {
                     "number": '370288903123969',  # 去掉空格
                     "name": '林文强',
-                    "month": '4',  # 单位数去掉0
+                    "month": '44',  # 单位数去掉0
                     "year": '2024',
                     "verification_value": '507'
                 }
@@ -283,11 +283,14 @@ def search():
     script_content = script_content.get_text()
     product = json.loads(script_content)
 
+    print(product)
+
     # 获取尺码列表
     size_list = product['variants']
     if not size_list:
         reqMsg('搜索商品-判断尺码列表是否为空', 404, '当前尺码列表 variants 为空', size_list)
         return False
+
 
     # 获取可用尺码
     for v in size_list:
@@ -329,7 +332,7 @@ def getSize():
             if ret:
                 return {'size': ret['size'], 'id': ret['id']}
             else:
-                print("等待获取尺码")
+                # print("等待获取尺码")
                 continue
                 time.sleep(0.5)
 
@@ -556,11 +559,11 @@ def threadPay(pro_num, num=0):
 
 
 if __name__ == "__main__":
-
+    search()
 
 
     # 开启多线程 付款
-    p = Pool(10)
+    p = Pool(1)
 
     # 获取bypass
     p.apply_async(setBypass)
