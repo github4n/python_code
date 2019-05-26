@@ -58,7 +58,7 @@ class Phone:
             break
 
         if 'success' not in req.text:
-            print("【获取短信】接口失败")
+            print("【获取短信】接口失败", req.text)
             return False
 
         req.encoding = 'UTF-8-SIG'
