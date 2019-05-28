@@ -42,8 +42,10 @@ class Phone:
             'mobile': str(phone),
             'timestamp': arrow.now().timestamp,
         }
+        print("【获取短信】：", "等待...")
         num = 1
-        while num <= 10:
+        time_long = 10
+        while num <= 12:
             req = requests.get(Phone.host, params=params)
 
             if req.status_code != 200:
@@ -51,14 +53,17 @@ class Phone:
                 return False
 
             if req.text == '3001':
-                time.sleep(10)
+                print("【获取短信】:", "第 " + str(num) + " 次接收短信  " + str(num * time_long) + " 秒")
+
+                time.sleep(time_long)
                 num += 1
                 continue
 
             break
 
         if 'success' not in req.text:
-            print("【获取短信】接口失败", req.text)
+            Phone.release(phone,itemid)
+            print("【获取短信】：", "获取超时")
             return False
 
         req.encoding = 'UTF-8-SIG'

@@ -78,11 +78,8 @@ def getProxies():
 
 
 # 注册账号
-def register():
+def register(db_nike):
     try:
-        myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
-        mydb = myclient["du"]
-        db_nike = mydb["nike"]
         # print("线程启动 第 " + str(i) + " 次")
 
         timeout = 30
@@ -93,10 +90,7 @@ def register():
         # 隐藏 "谷歌正在受到自动测试"
         option.add_argument('disable-infobars')
         # 不加载图片, 提升速度
-        # option.add_argument('blink-settings=imagesEnabled=false')
-        option.add_argument(
-            'user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36"')
-
+        option.add_argument('blink-settings=imagesEnabled=false')
         # 后台运行
         # option.add_argument('headless')
         # 开启实验性功能参数
@@ -115,7 +109,7 @@ def register():
 
         # 点击立即加入
         xpath = "//a[text()='立即加入。']"
-        WebDriverWait(driver, 10, 0.5).until(
+        WebDriverWait(driver, timeout, 0.5).until(
             EC.element_to_be_clickable((By.XPATH, xpath)))
         driver.find_element_by_xpath(xpath).click()
         print("【点击立即加入】")
@@ -137,9 +131,17 @@ def register():
         driver.find_element_by_xpath(xpath).click()
         print("【点击发送验证码】")
 
-
-        # 等待获取验证码
-        sms = phoneSdk.Phone.getSms(phone, 723)
+        sms_num = 1
+        while sms_num <= 3:
+            # 等待获取验证码
+            sms = phoneSdk.Phone.getSms(phone, 723)
+            if not sms:
+                print("【获取验证码】超时", "第 " + str(sms_num) + " 次")
+                # 点击发送验证码
+                driver.find_element_by_xpath(xpath).click()
+                sms_num += 1
+                continue
+            break
 
         # 填写验证码
         xpath = "//input[@placeholder='输入验证码']"
@@ -154,7 +156,6 @@ def register():
             EC.element_to_be_clickable((By.XPATH, xpath)))
         driver.find_element_by_xpath(xpath).click()
         print("【点击 继续】")
-
 
         # 获取姓名
         name = nameSdk.getName()
@@ -195,7 +196,6 @@ def register():
         driver.find_element_by_xpath(xpath).click()
         print("【点击注册】")
 
-
         # 点击跳过 这样才能登陆
         xpath = "//input[@value='跳过']"
         WebDriverWait(driver, timeout, 0.5).until(
@@ -203,18 +203,24 @@ def register():
         driver.find_element_by_xpath(xpath).click()
         print("【点击跳过 这样才能登陆】")
 
+        num = 1
+        while num <= 3:
+            try:
+                # 跳转地址设置
+                driver.get("https://www.nike.com/member/settings/addresses")
+                print("【跳转地址设置】")
 
-        # 跳转地址设置
-        driver.get("https://www.nike.com/member/settings/addresses")
-        print("【跳转地址设置】")
-
-        # 点击添加配送地址
-        xpath = "//*[@class='ncss-btn-secondary-dark d-sm-h d-md-ib']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_elements_by_xpath(xpath)[2].click()
-        print("【点击添加配送地址】")
-
+                # 点击添加配送地址
+                xpath = "//*[@class='ncss-btn-secondary-dark d-sm-h d-md-ib']"
+                WebDriverWait(driver, timeout, 0.5).until(
+                    EC.element_to_be_clickable((By.XPATH, xpath)))
+                driver.find_elements_by_xpath(xpath)[2].click()
+                print("【点击添加配送地址】")
+                break
+            except:
+                time.sleep(1)
+                num += 1
+                continue
 
         # 设置默认配送地址
         xpath = "//*[text()='将其设为我的默认配送地址']"
@@ -366,6 +372,9 @@ def threadPay(num=0):
 
 
 if __name__ == '__main__':
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
+    mydb = myclient["du"]
+    db_nike = mydb["nike"]
+    with ThreadPoolExecutor(max_workers=15) as pool:
         for i in range(200):
-            future1 = pool.submit(register)
+            future1 = pool.submit(register, db_nike)
