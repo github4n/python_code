@@ -290,10 +290,10 @@ def edit(driver, change_info, myclient):
 
         # 防止没有提交成功 一直提交
         click_num = 1
-        while True:
+        while click_num <= 5:
             try:
                 # 等待 修改成功后跳转到 宝贝页面
-                WebDriverWait(driver, 20, 0.5).until(
+                WebDriverWait(driver, 5, 0.5).until(
                     EC.presence_of_element_located((By.XPATH, '//*[@id="J_Title"]'))
                 )
                 break
