@@ -375,6 +375,6 @@ if __name__ == '__main__':
     myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
     mydb = myclient["du"]
     db_nike = mydb["nike"]
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=15) as pool:
         for i in range(200):
             future1 = pool.submit(register, db_nike)
