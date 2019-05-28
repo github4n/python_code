@@ -249,7 +249,7 @@ def edit(driver, change_info, myclient):
                 index += 1
 
             # 滚动页面
-            scrollTop = 40 + (i * 560)
+            scrollTop = 40 + (i * 520)
             js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
             driver.execute_script(js)
 
@@ -270,8 +270,13 @@ def edit(driver, change_info, myclient):
         else:
             min_price = min(yikou_price.values())
             msg("填写一口价", "货号：" + str(change_info['article_number']), "设置一口价：" + str(min_price))
-        driver.find_element_by_xpath("//input[@id='price']").clear()
-        driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
+
+        # 重复填写一口价3次
+        yikou_num = 1
+        while yikou_num <= 3:
+            driver.find_element_by_xpath("//input[@id='price']").clear()
+            driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
+            yikou_num += 1
 
         WebDriverWait(driver, 20, 0.5).until(
             EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
@@ -288,6 +293,7 @@ def edit(driver, change_info, myclient):
             msg("表单提交修改信息", "失败", submit_error)
 
 
+        time.sleep(1)
         # 防止没有提交成功 一直提交
         click_num = 1
         while click_num <= 5:
