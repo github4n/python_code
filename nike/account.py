@@ -22,15 +22,13 @@ PARAMS = {
     'language': 'zh-Hans',
 }
 
-PROXIES = False
-
 HEADER = {
     "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36",
 }
 
-FIDDLER = True
-
-DEBUG = True
+PROXIES = False
+FIDDLER = False
+DEBUG = False
 
 # 链接mongodb
 myclient = pymongo.MongoClient("mongodb://" + conf.mongo['host'] + ':' + conf.mongo['port'])
@@ -174,9 +172,8 @@ def register():
             # # 设置 芝麻代理 ip
             req.proxies.update(getProxies())
 
-    #
-    # if DEBUG:
-    #     testProxies(req)
+            if DEBUG:
+                testProxies(req)
 
     # 发送短信
     info = sendPhone(req)
@@ -213,12 +210,12 @@ def register():
         "minimumAgeReason": "TERMS"
     }
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.125 Safari/537.36',
-        'Referer': 'https://www.nike.com/cn/'
-    }
+    # headers = {
+    #     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.125 Safari/537.36',
+    #     'Referer': 'https://www.nike.com/cn/'
+    # }
 
-    ret = req.post(url, params=PARAMS, json=json,headers=headers)
+    ret = req.post(url, params=PARAMS, json=json, timeout=20)
 
     if ret.status_code != 201:
         msg('账号设置接口异常', ret.status_code, ret.text)
@@ -333,10 +330,15 @@ def getAccessToken(phone, refresh_token):
         'ux_id': 'com.nike.commerce.snkrs.ios',
         'refresh_token': refresh_token,
     }
-    try:
-        ret = requests.post(url, json=json, timeout=Timeout, proxies=PROXIES)
-    except:
-        msg('获取AccessToken', ret.status_code, '代理连接失败')
+    num = 1
+    while num <= 3:
+        try:
+            ret = requests.post(url, json=json, timeout=Timeout, proxies=PROXIES)
+            break
+        except:
+            msg('获取AccessToken', ret.status_code, '代理连接失败')
+            num += 1
+            continue
     try:
         access_token = ret.json()['access_token']
     except:
