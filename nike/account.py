@@ -210,10 +210,23 @@ def register():
         "minimumAgeReason": "TERMS"
     }
 
-    # headers = {
-    #     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.125 Safari/537.36',
-    #     'Referer': 'https://www.nike.com/cn/'
-    # }
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.125 Safari/537.36',
+        'Referer': 'https://www.nike.com/cn/',
+        'Origin': 'https://www.nike.com',
+        'Content-Type': 'application/json',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+    }
+
+    req.cookies["CONSUMERCHOICE"] = "cn/zh_cn"
+    req.cookies["NIKE_COMMERCE_COUNTRY"] = "CN"
+    req.cookies["NIKE_COMMERCE_LANG_LOCALE"] = "zh_CN"
+    req.cookies["nike_locale"] = "cn/zh_cn"
+    req.headers.update(headers)
+    print(req.headers)
+    print(req.cookies.get_dict())
 
     ret = req.post(url, params=PARAMS, json=json, timeout=20)
 
