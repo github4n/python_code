@@ -1,21 +1,16 @@
-import ys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 from concurrent.futures import ThreadPoolExecutor
 
 import common.phone as phoneSdk
-import common.randName as nameSdk
+import common.randomName as nameSdk
 import time, random, arrow, threading
 
 import requests, pymongo, queue, traceback
-from multiprocessing import Pool, Queue
 
-PROXIES_API = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
 
 
 # def login():
@@ -68,7 +63,8 @@ PROXIES_API = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0
 
 # 获取代理ip
 def getProxies():
-    ret = requests.get(PROXIES_API)
+    proxies_api = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
+    ret = requests.get(proxies_api)
     if ret.status_code != 200:
         print('获取代理IP', ret.status_code, '获取代理ip失败', ret.text)
 
