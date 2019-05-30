@@ -55,7 +55,7 @@ def rankLogin():
             continue
 
         if not password:
-            password = input('请输入在账号：' + username + ' 的密码:')
+            password = input('请输入账号：' + username + ' 的密码:')
 
         # MD5加密密码
         # 生成一个md5对象
@@ -142,8 +142,16 @@ def edit(driver, change_info, myclient):
         mydb = myclient["du"]
         db_price = mydb["price"]
 
+        # 跳转之前判断是否有表单弹窗
+        result = EC.alert_is_present()(driver)
+        if result:
+            result.accept()
+            msg('弹框点击', '成功', '确认离开该页面！')
+
+
         # 跳转商品编辑页面
         driver.get('https://item.publish.taobao.com/sell/publish.htm?itemId=' + str(change_info['taobao_id']))
+
 
         # 判断宝贝是否还存在
         is_have = driver.find_elements_by_xpath("//div[@class='feedback-notice-hd']")
@@ -167,10 +175,14 @@ def edit(driver, change_info, myclient):
             price = str(v['price'] / 100).replace('.0', '')
             price_list[size] = price
 
-        price_log = {}
+        price_log_yes = {}
+        price_log_no = {}
 
         # 一口价
         yikou_price = {}
+
+        # 是否修改
+        is_edit = 0
 
         for i in range(1, 10):
             time.sleep(0.5)
@@ -195,6 +207,7 @@ def edit(driver, change_info, myclient):
             for v in dom_size_list:
                 # 价格
                 old_price = v.get_attribute('value')
+                old_price = int(old_price.replace('.00', ''))
                 # 货号
                 goods_no = goods_no_list[index].get_attribute('title')
                 # 尺码
@@ -205,11 +218,11 @@ def edit(driver, change_info, myclient):
 
                 # 记录一口价
                 if int(sold) > 0:
-                    yikou_price[size] = int(old_price.replace('.00', ''))
+                    yikou_price[goods_no + size] = old_price
 
                 # 判断货号一致性
                 if change_info['article_number'] not in goods_no:
-                    # print("修改货号：", change_info['article_number'], "淘宝sku名称：", goods_no)
+                    # msg("货号判断：", '目标货号：' + change_info['article_number'], "淘宝sku名称：", goods_no)
                     index += 1
                     continue
 
@@ -225,62 +238,129 @@ def edit(driver, change_info, myclient):
                     index += 1
                     continue
 
-                # 清除 input 的值
-                v.clear()
 
-                # 填写最新价格
+                # 获取最新价格
                 new_price = int(price_list[dom_size]) + int(change_info['price'])
-                v.send_keys(new_price)
+
+                # 只有价格不相等才修改
+                if int(old_price) != int(new_price):
+                    # 清除 input 的值
+                    v.clear()
+                    v.send_keys(new_price)
+
+                    # 修改状态 + 1
+                    is_edit += 1
+
+                    edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
+                        old_price) + ' ▶▶▶▶ ' + str(
+                        new_price) + "  尺码：" + str(dom_size)
+                    price_log_yes[dom_size] = edit_log
+
+                else:
+                    edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
+                        old_price) + ' ▶▶▶▶ ' + str(
+                        new_price) + "  尺码：" + str(dom_size)
+                    # 记录价格变动修改
+                    price_log_no[dom_size] = edit_log
+
+
+
+
 
                 # 通过聚焦使用 阿里自带 JS 修改一口价
                 js = "document.getElementById('price').focus()"
                 driver.execute_script(js)
 
-                # 记录价格变动修改
-                edit_log = "毒：" + str(price_list[dom_size]) + " " + str(change_info['price']) + "  " + str(
-                    old_price) + ' ▶▶▶▶ ' + str(
-                    new_price) + "  尺码：" + str(dom_size)
-                price_log[dom_size] = edit_log
+
 
                 # 记录一口价
                 if int(sold) > 0:
-                    yikou_price[size] = new_price
+                    price = v.get_attribute('value')
+                    price = int(price.replace('.00', ''))
+                    yikou_price[goods_no + size] = price
 
                 index += 1
+
 
             # 滚动页面
             scrollTop = 40 + (i * 520)
             js = "document.getElementsByClassName('ver-scroll-wrap')[0].scrollTop=" + str(scrollTop)
             driver.execute_script(js)
 
+
         # 判断是否有价格变动信息 没有代表sku货号不存在
-        if not price_log:
+        if (not price_log_no) and (not price_log_yes):
             msg("价格变动", "失败", "请检查sku名称 是否添加了货号:" + change_info['article_number'])
             return False
-        else:
-            for k, v in price_log.items():
-                msg("价格变动", "成功", v, False)
+
+        if price_log_yes:
+            for k, v in price_log_yes.items():
+                msg("价格变动", "修改", v, False)
+            print("\n")
+
+        if price_log_no:
+            for k, v in price_log_no.items():
+                msg("价格变动", "价格无变动，不修改", v, False)
 
         print("-----------------------------------------")
+
 
         # 填写一口价
         if not yikou_price:
             msg("填写一口价", "货号：" + str(change_info['article_number']), "所有库存为 0，不修改价格")
             return False
+
+
+        # 获取老一口价价格
+        yikou_old_price = driver.find_element_by_xpath("//input[@id='price']").get_attribute('value')
+        yikou_old_price = int(yikou_old_price.replace('.00', ''))
+        # 获取一口价
+        min_price = int(min(yikou_price.values()))
+
+
+        if yikou_old_price == min_price:
+            msg("填写一口价", "货号：" + str(change_info['article_number']), "一口价没有变动 老：" + str(yikou_old_price) + ' 新：' + str(min_price))
         else:
-            min_price = min(yikou_price.values())
             msg("填写一口价", "货号：" + str(change_info['article_number']), "设置一口价：" + str(min_price))
+            # 重复填写一口价3次
+            yikou_num = 1
+            while yikou_num <= 3:
+                driver.find_element_by_xpath("//input[@id='price']").clear()
+                driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
+                yikou_num += 1
 
-        # 重复填写一口价3次
-        yikou_num = 1
-        while yikou_num <= 3:
-            driver.find_element_by_xpath("//input[@id='price']").clear()
-            driver.find_element_by_xpath("//input[@id='price']").send_keys(min_price)
-            yikou_num += 1
+            WebDriverWait(driver, 20, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
+            )
+            # 修改状态 + 1
+            is_edit += 1
 
-        WebDriverWait(driver, 20, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, "//button[@id='button-submit']"))
-        )
+        # code_num = 1
+        # while code_num <= 11:
+        #     if code_num == 10:
+        #         msg('等待手机验证码', '超时', '请重新执行脚本！')
+        #         driver.close()
+        #         driver.quit()
+        #         quit()
+        #         return False
+        #
+        #     # 检测是否需要发送手机验证码
+        #     xpath = "//div[text()='发布商品验证']"
+        #     code = driver.find_elements_by_xpath(xpath)
+        #     if code:
+        #         msg('等待手机验证码', '等待', '已等待 ' + str(code_num * 10) + ' 秒')
+        #         time.sleep(10)
+        #         code_num += 1
+        #         continue
+        #     else:
+        #         break
+
+        msg('修改条数统计', '数量：', is_edit)
+
+        if is_edit == 0:
+            msg('修改状态判断', '无修改', '最新价格没有变动，不修改该宝贝。')
+            return False
+
         # 提交表单
         driver.find_element_by_xpath("//button[@id='button-submit']").click()
 
@@ -294,6 +374,7 @@ def edit(driver, change_info, myclient):
 
 
         time.sleep(1)
+
         # 防止没有提交成功 一直提交
         click_num = 1
         while click_num <= 5:
@@ -406,10 +487,17 @@ def startChrom():
                     mongo_num += 1
                     time.sleep(5)
                     continue
-
+            list_num = 0
             for v in change_list:
+                if list_num == 50:
+                    time.sleep(2*60)
+                    msg('休眠2分钟，防止过多访问', 200, '宝贝数量修改达到 50 个，进入休眠状态')
+                    list_num = 0
+
                 msg("修改价格", "开始", v['article_number'] + ' ' + v['title'])
                 edit(driver, v, myclient)
+                list_num += 1
+
             time_edit = 0
 
             next_time = arrow.now().timestamp + (60 * time_edit_set)
@@ -430,4 +518,14 @@ def msg(name, status, content, line=True):
 
 
 if __name__ == '__main__':
+    print('--------------------------------')
+    print('          RANK 淘宝改价          ')
+    print('          version 1.2           ')
+    print('--------------------------------')
+    print('更新说明                         ')
+    print('1.只修改价格有变动尺码             ')
+    print('2.只修改有变动一口价              ')
+    print('2.每改50个宝贝会休眠2分钟，防止禁止修改')
+    print('--------------------------------')
+
     startChrom()

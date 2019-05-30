@@ -408,6 +408,45 @@ def login(req, phone):
     return access_token
 
 
+def check():
+    url = 'https://api.nike.com/buy/checkout_previews/v2/308900b2-023b-4e80-b01b-f62d0591153e'
+    json = {
+        "request": {
+            "email": "515788423@qq.com",
+            "country": "CN",
+            "currency": "CNY",
+            "locale": "zh_CN",
+            "channel": "SNKRS",
+            "clientInfo": {
+                "deviceId": "0400bpNfiPCR/AUNf94lis1ztioT9A1DShgA6/Ao2WE9gwpcE7v8aPDcWlOv5uA0UdlgclVPr2nT04dWpa2HN7KodCNhNKPIN7oLJiDbCfVZTGBk19tyNs7g8xGJ4AM/fWkjMT7M4i07wiM7RIrluaJTNZhjg11m5Ky0iz/8E93rWp/UDNqQKPsctXwB7SaH85JmyAfUMZ5LKFpm2SGEcGZ2IpvXHhwykQoiuMSNUUyGAvKLg+9aginJmamvnOVDH3SzV6i8/tb5alAK/XRNo3H5dMIK6EAX6criEeK7f1sHWr/MY6jdqwhMR1U8NguKENqeSipYNscDiy7T7W+bd9sPijjzMlk8qOA4SG4vGu6BHVn6Bt5rMAOfNh5oxVTcz01eYNlB6KRM5rkxoJRoa1a2MPPfBp8j9Zgc5euufkAbuidtn8ppbyNYRNOCPPlJnrU205+m/s9uEinvsD8Ae2HMhAjTuni0YYcF7yZHbT+hap8T0tJPmnbeZcp/aGHCqy0n6uFgohzG6tiptIXf57qiD+/NShNSOZtf1eHfkZ0HoJzSt0oGtrebhl+cErIIPd1t5JDEIMmkIq0RxtKIdel+037+7ToQ6j9QRif0QUxF+/FWC4Z0KPmWF7i03C9m3vCz5ZKQguJVBsn6yc/35JaHDFXG8dZ/+4rjjmU2L5yi9CUazeAGgOH2OW+/wThvaky9rI3MaSYrgzuOZTYvnKL0JQQ08ROukpTpxifyrThRovESnjwNVGXSgGQ8InPsuf6/kpMgG84gzO5PMQF00uJew9XqxzJ4y+q4S2EhkUn+gmCpHoNuaW8iMFyeoVK8ClD0ljAlWwXHcT/nzMar+FnRmjKx4PQbX9OHEQi+wlGoZ8X2ykV3stOnGOGu3rhaojFIr5XHrcXp6A3e7luHyq04xmEqhJPR2E4I4JJTShk9Y0R8X2Fd1ngNFGSttdZygKPcQVL2duy/r6Bk2cfD0IHAIf2vFnup4QVZyItGv9DL584iiUloUR2VuTRIAZsdlAxHLHCguNHzqNXmGR9mGYky6/GSKNklI9jLZU3Vk61yqVmuHdDU72bMGSw+Jld00Kp8oBvPA6u04i1McDaVptovbdciPTQaFQzmbybyR0SybS5mlBHKop6a4uHlWBi8fPnYDmhH8iNT5tmMPY7fFSAH5m0B4eJx8sYQo5pLMLpVT1gUUA3pDXHzRas4/GRSXiLQvkV0LESmffCJ1D3KVsetdJle8lBA/HWhRNe3VFP7yqCoe32hf+m9wrzbpErBqKdelU99UoH2xkmOMbP2hDMnxB15lwo/ksLPPFfndA3rwhwensxetClb2J9hPAXquSXzKM2zqJmU+W4xWGZYhQabfQs3h76aNh89lPir8vPX0rlCs8i9Y6lXcy00yPPfV1jYUQzq0nYSpYBqp7otoiTxlJa3c3jVldoE"
+            },
+            "items": [{
+                "id": "f6553f15-35c2-5846-9ba3-a1b937f0b06d",
+                "skuId": "d7567155-930d-5fe1-a1db-2a6c623b4c1e",
+                "quantity": 1,
+                "recipient": {
+                    "firstName": "文强", "lastName": "林"
+                },
+                "shippingAddress": {
+                    "address1": "2栋3单元865",
+                    "address2": "东亚新干线",
+                    "city": "杭州市",
+                    "state": "CN-33",
+                    "postalCode": "00000",
+                    "county": "江干区",
+                    "country": "CN"
+                },
+                "contactInfo": {
+                    "email": "515788423@qq.com", "phoneNumber": "18968804688"
+                },
+                "shippingMethod": "GROUND_SERVICE"
+            }]
+        }
+    }
+
+    url = 'https://api.nike.com/buy/checkout_previews/v2/jobs/5e229708-f398-43fa-b273-d6df8c007b16'
+
+
 def msg(name, status, content, line=True):
     msg_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
     print(msg_time, "[" + name + "]：", status, content)
