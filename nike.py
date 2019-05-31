@@ -22,11 +22,21 @@ db_account = mydb["account"]
 
 # 获取代理ip
 def getProxies():
-    proxies_api = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
-    ret = requests.get(proxies_api)
-    if ret.status_code != 200:
-        msg('获取代理IP', '失败', ret.status_code)
-        return False
+    num = 1
+    while num <= 3:
+        proxies_api = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
+        ret = requests.get(proxies_api)
+        if ret.status_code != 200:
+            msg('获取代理IP', '失败', ret.status_code)
+            return False
+
+        if 'code' in ret.text:
+            if ret.json()['code'] == 111:
+                msg('获取代理IP', '过于频繁', '1 秒后重新获取')
+                time.sleep(1)
+                num += 1
+                continue
+        break
 
     msg('获取代理IP', '成功', ret.text)
 
@@ -304,6 +314,10 @@ def getAccessToken(phone, refresh_token, proxies):
             ret = requests.post(url, json=json, timeout=Timeout, proxies=proxies)
             break
         except:
+            proxies = {
+                'https': proxies,
+            }
+
             msg('获取AccessToken', ret.status_code, '代理连接失败')
             num += 1
             continue
