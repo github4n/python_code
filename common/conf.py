@@ -54,7 +54,6 @@ else:
     database = dev_database
     mongo = dev_mongo
 
-# mongo = pro_mongo
 
 
 # 表设置
