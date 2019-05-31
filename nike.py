@@ -36,6 +36,14 @@ def getProxies():
                 time.sleep(1)
                 num += 1
                 continue
+        try:
+            url = 'https://www.nike.com/cn/'
+            requests.get(url, proxies={'https': ret.text}, timeout=10)
+        except:
+            msg('获取代理IP', 'IP速度过慢', '重新获取')
+            num += 1
+            continue
+
         break
 
     msg('获取代理IP', '成功', ret.text)
@@ -48,7 +56,7 @@ def register(index):
     try:
         msg("线程启动", "成功", "第 " + str(index) + " 次")
 
-        timeout = 30
+        timeout = 10
         now_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
 
         # 加启动配置
@@ -196,7 +204,7 @@ def register(index):
         print("获取随机出生日期：", random_birth)
 
         xpath = "//input[@placeholder='出生日期']"
-        WebDriverWait(driver, timeout, 0.5).until(
+        WebDriverWait(driver, 10, 0.5).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         driver.find_element_by_xpath(xpath).send_keys(random_birth)
         print("【设置出生日日期：", random_birth)
@@ -366,7 +374,6 @@ def setAddress(driver, phone):
             print("【点击添加配送地址】")
             break
         except:
-            driver.get("https://www.nike.com/cn/")
             time.sleep(1)
             num += 1
             continue
@@ -442,6 +449,17 @@ def setAddress(driver, phone):
             driver.find_element_by_xpath(xpath).clear()
             driver.find_element_by_xpath(xpath).send_keys(address)
 
+            # 填写邮政编码
+            postage_code = '221011'
+            xpath = "//*[@id='邮政编码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element_by_xpath(xpath).clear()
+            driver.find_element_by_xpath(xpath).send_keys(postage_code)
+            print("【填写邮政编码】")
+
+
+
             # 填写电话号码
             xpath = "//*[@id='电话号码']"
             WebDriverWait(driver, timeout, 0.5).until(
@@ -497,7 +515,7 @@ if __name__ == '__main__':
 
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        for i in range(20):
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        for i in range(100):
             future1 = pool.submit(register, threading_index)
             threading_index += 1

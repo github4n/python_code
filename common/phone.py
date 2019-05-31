@@ -63,7 +63,7 @@ def getSms(phone, itemid):
 
     num = 1
     time_long = 10
-    while num <= 12:
+    while num <= 6:
         time.sleep(time_long)
 
         ret = requests.get(host, params=params)
