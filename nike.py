@@ -80,7 +80,10 @@ def register(index):
 
         driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe',
                                   chrome_options=option)
+        # 设置最大超时时间
+        driver.set_page_load_timeout(30)  # seconds
 
+        # 删除所有cookie
         driver.delete_all_cookies()
 
         # 设置浏览器宽高
@@ -105,6 +108,7 @@ def register(index):
             msg('访问nike首页', '超时', '代理访问超时')
             return False
 
+
         # 加入/登录Nike⁠Plus账号
         xpath = "//span[text()='加入/登录Nike⁠Plus账号']"
         WebDriverWait(driver, timeout, 0.5).until(
@@ -119,36 +123,49 @@ def register(index):
         driver.find_element_by_xpath(xpath).click()
         print("【点击立即加入】")
 
-        # 获取手机号
-        phone = phoneSdk.getPhone(723)
-        if not phone:
-            return False
 
-        # 填写手机号
-        xpath = "//input[@placeholder='手机号码']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).send_keys(phone)
-        print("【填写手机号】")
+        try_num = 1
+        while try_num <= 4:
+            if try_num == 4:
+                msg('手机验证步骤', '重试次数已达3次', '退出浏览器')
+                return False
+            # 获取手机号
+            phone = phoneSdk.getPhone(723)
+            if not phone:
+                try_num += 1
+                continue
 
-        # 点击发送验证码
-        xpath = "//input[@value='发送验证码']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).click()
-        print("【点击发送验证码】")
 
-        # 获取验证码
-        sms = phoneSdk.getSms(phone, 723)
-        if not sms:
-            return False
+            # 填写手机号
+            xpath = "//input[@placeholder='手机号码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element_by_xpath(xpath).clear()
+            driver.find_element_by_xpath(xpath).send_keys(phone)
+            print("【填写手机号】")
 
-        # 填写验证码
-        xpath = "//input[@placeholder='输入验证码']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).send_keys(sms)
-        print("【填写验证码】")
+            # 点击发送验证码
+            xpath = "//input[@value='发送验证码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.element_to_be_clickable((By.XPATH, xpath)))
+            driver.find_element_by_xpath(xpath).click()
+            print("【点击发送验证码】")
+
+            # 获取验证码
+            sms = phoneSdk.getSms(phone, 723)
+            if not sms:
+                try_num += 1
+                continue
+
+            # 填写验证码
+            xpath = "//input[@placeholder='输入验证码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.find_element_by_xpath(xpath).clear()
+            driver.find_element_by_xpath(xpath).send_keys(sms)
+            print("【填写验证码】")
+
+            break
 
         # 点击 继续
         xpath = "//input[@value='继续']"
@@ -196,6 +213,7 @@ def register(index):
         driver.find_element_by_xpath(xpath).click()
         print("【点击注册】")
 
+
         # 设置出生日日期
         random_year = '00' + str(random.randint(1990, 2000))
         random_month = '0' + str(random.randint(1, 9))
@@ -204,7 +222,7 @@ def register(index):
         print("获取随机出生日期：", random_birth)
 
         xpath = "//input[@placeholder='出生日期']"
-        WebDriverWait(driver, 10, 0.5).until(
+        WebDriverWait(driver, 100, 0.5).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         driver.find_element_by_xpath(xpath).send_keys(random_birth)
         print("【设置出生日日期：", random_birth)
@@ -322,11 +340,14 @@ def getAccessToken(phone, refresh_token, proxies):
             ret = requests.post(url, json=json, timeout=Timeout, proxies=proxies)
             break
         except:
+            new_proxies = getProxies()
+
+            msg('获取AccessToken', ret.status_code, '代理连接失败,重新获取代理ip:' + new_proxies)
+
             proxies = {
-                'https': proxies,
+                'https': new_proxies,
             }
 
-            msg('获取AccessToken', ret.status_code, '代理连接失败')
             num += 1
             continue
     try:
@@ -470,7 +491,7 @@ def setAddress(driver, phone):
 
             # 点击保存
             xpath = "//*[text()='保存']"
-            WebDriverWait(driver, timeout, 0.5).until(
+            WebDriverWait(driver, 5, 0.5).until(
                 EC.element_to_be_clickable((By.XPATH, xpath)))
             driver.find_element_by_xpath(xpath).click()
 
@@ -515,7 +536,7 @@ if __name__ == '__main__':
 
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        for i in range(100):
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for i in range(10):
             future1 = pool.submit(register, threading_index)
             threading_index += 1
