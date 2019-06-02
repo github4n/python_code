@@ -6,6 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -18,6 +19,8 @@ myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27
 # myclient = pymongo.MongoClient("mongodb://" + conf.mongo['host'] + ':' + conf.mongo['port'])
 mydb = myclient["nike"]
 db_account = mydb["account"]
+
+NUM = 0
 
 
 # 获取代理ip
@@ -53,6 +56,7 @@ def getProxies():
 
 # 注册账号
 def register(index):
+    global NUM
     try:
         msg("线程启动", "成功", "第 " + str(index) + " 次")
 
@@ -108,21 +112,27 @@ def register(index):
             msg('访问nike首页', '超时', '代理访问超时')
             return False
 
-
         # 加入/登录Nike⁠Plus账号
         xpath = "//span[text()='加入/登录Nike⁠Plus账号']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).click()
+            EC.element_to_be_clickable((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.click()
         print("【加入/登录Nike⁠Plus账号】")
 
         # 点击立即加入
         xpath = "//a[text()='立即加入。']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).click()
-        print("【点击立即加入】")
+            EC.element_to_be_clickable((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
 
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.click()
+        print("【点击立即加入】")
 
         try_num = 1
         while try_num <= 4:
@@ -135,20 +145,35 @@ def register(index):
                 try_num += 1
                 continue
 
-
             # 填写手机号
             xpath = "//input[@placeholder='手机号码']"
             WebDriverWait(driver, timeout, 0.5).until(
-                EC.presence_of_element_located((By.XPATH, xpath)))
-            driver.find_element_by_xpath(xpath).clear()
-            driver.find_element_by_xpath(xpath).send_keys(phone)
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            dom = driver.find_element_by_xpath(xpath)
+
+            ActionChains(driver).move_to_element(dom).perform()
+            dom.clear()
+            dom.send_keys(phone)
             print("【填写手机号】")
+
+            # 随机移动鼠标 防止被监控为BOT行为
+            for v in range(5):
+                x = random.randint(-100, 500)
+                y = random.randint(-100, 500)
+                ActionChains(driver).move_by_offset(x, y).perform()
+                msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
+                time.sleep(0.5)
 
             # 点击发送验证码
             xpath = "//input[@value='发送验证码']"
             WebDriverWait(driver, timeout, 0.5).until(
-                EC.element_to_be_clickable((By.XPATH, xpath)))
-            driver.find_element_by_xpath(xpath).click()
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+            dom = driver.find_element_by_xpath(xpath)
+
+            ActionChains(driver).move_to_element(dom).perform()
+            dom.click()
             print("【点击发送验证码】")
 
             # 获取验证码
@@ -161,8 +186,11 @@ def register(index):
             xpath = "//input[@placeholder='输入验证码']"
             WebDriverWait(driver, timeout, 0.5).until(
                 EC.presence_of_element_located((By.XPATH, xpath)))
-            driver.find_element_by_xpath(xpath).clear()
-            driver.find_element_by_xpath(xpath).send_keys(sms)
+            dom = driver.find_element_by_xpath(xpath)
+
+            ActionChains(driver).move_to_element(dom).perform()
+            dom.clear()
+            dom.send_keys(sms)
             print("【填写验证码】")
 
             break
@@ -170,8 +198,12 @@ def register(index):
         # 点击 继续
         xpath = "//input[@value='继续']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).click()
+            EC.element_to_be_clickable((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.click()
         print("【点击 继续】")
 
         # 获取姓名
@@ -180,38 +212,72 @@ def register(index):
         # 填写 姓
         xpath = "//input[@placeholder='姓氏']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).send_keys(name['xm'])
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.send_keys(name['xm'])
         print("【填写 姓】")
 
         # 填写 名
         xpath = "//input[@placeholder='名字']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).send_keys(name['mz'])
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.send_keys(name['mz'])
         print("【填写 名】")
 
         # 填写 密码
+        password = 'Mn476489634'
+
         xpath = "//input[@placeholder='密码']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        password = 'Mn476489634'
-        driver.find_element_by_xpath(xpath).send_keys(password)
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.send_keys(password)
         print("【填写 密码】")
 
         # 选择 性别 男 M
         xpath = "//ul[@data-componentname='gender']/li"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
+            EC.element_to_be_clickable((By.XPATH, xpath))
+        )
         driver.find_elements_by_xpath(xpath)[0].click()
         print("【选择 性别 男 M】")
+
+        # 随机移动鼠标 防止被监控为BOT行为
+        for v in range(3):
+            x = random.randint(-100, 500)
+            y = random.randint(-100, 500)
+            ActionChains(driver).move_by_offset(x, y).perform()
+            msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
+            time.sleep(0.5)
 
         # 点击注册
         xpath = "//input[@value='注册']"
         WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).click()
+            EC.element_to_be_clickable((By.XPATH, xpath))
+        )
+        dom = driver.find_element_by_xpath(xpath)
+
+        ActionChains(driver).move_to_element(dom).perform()
+        dom.click()
         print("【点击注册】")
+
+        # 随机移动鼠标 防止被监控为BOT行为
+        for v in range(5):
+            x = random.randint(-100, 500)
+            y = random.randint(-100, 500)
+            ActionChains(driver).move_by_offset(x, y).perform()
+            msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
+            time.sleep(0.5)
 
 
         # 设置出生日日期
@@ -222,7 +288,7 @@ def register(index):
         print("获取随机出生日期：", random_birth)
 
         xpath = "//input[@placeholder='出生日期']"
-        WebDriverWait(driver, 100, 0.5).until(
+        WebDriverWait(driver, 20, 0.5).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         driver.find_element_by_xpath(xpath).send_keys(random_birth)
         print("【设置出生日日期：", random_birth)
@@ -271,6 +337,10 @@ def register(index):
         refresh_token = getRefreshToken(driver, phone)
 
         getAccessToken(phone, refresh_token, proxies)
+
+        NUM += 1
+
+        msg('成功统计', '数量', NUM)
 
         return True
 
@@ -376,7 +446,7 @@ def getAccessToken(phone, refresh_token, proxies):
 def setAddress(driver, phone):
     time.sleep(5)
 
-    timeout = 20
+    timeout = 10
 
     num = 1
     while num <= 4:
@@ -395,6 +465,7 @@ def setAddress(driver, phone):
             print("【点击添加配送地址】")
             break
         except:
+            print("重新访问地址设置", "第 " + str(num) + " 次")
             time.sleep(1)
             num += 1
             continue
@@ -479,8 +550,6 @@ def setAddress(driver, phone):
             driver.find_element_by_xpath(xpath).send_keys(postage_code)
             print("【填写邮政编码】")
 
-
-
             # 填写电话号码
             xpath = "//*[@id='电话号码']"
             WebDriverWait(driver, timeout, 0.5).until(
@@ -530,13 +599,27 @@ def msg(name, status, content, line=True):
 
 
 if __name__ == '__main__':
+    start_time = arrow.now().timestamp
+
     myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
     mydb = myclient["du"]
     db_nike = mydb["nike"]
 
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=10) as pool:
-        for i in range(10):
+    with ThreadPoolExecutor(max_workers=30) as pool:
+        for i in range(30):
             future1 = pool.submit(register, threading_index)
             threading_index += 1
+
+    end_time = arrow.now().timestamp
+    use_time = end_time - start_time
+
+    time_msg = '总耗时: ' + str(use_time) + " 开始时间: " + str(
+        arrow.get(start_time).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')) + "  结束时间: " + str(
+        arrow.get(end_time).to('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss'))
+
+    msg('时间统计', time_msg, "")
+
+    msg("运行统计", "成功", NUM)
+    msg("运行统计", "失败", threading_index - NUM)
