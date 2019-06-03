@@ -1,12 +1,13 @@
-import common.conf as conf
 import common.phone as phoneSdk
-import common.randomName as nameSdk
+
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+
+from faker import Faker
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,7 +21,25 @@ myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27
 mydb = myclient["nike"]
 db_account = mydb["account"]
 
+HOST = "https://unite.nike.com/"
+
+PARAMS = {
+    'appVersion': "595",
+    'experienceVersion': "493",
+    'uxId': "com.nike.commerce.nikedotcom.web",
+    'locale': "zh_CN",
+    'backendEnvironment': "identity",
+    'browser': "Google Inc.",
+    'os': "undefined",
+    'mobile': "false",
+    'native': "false",
+    'visit': "3",
+    'language': 'zh-Hans',
+}
+
 NUM = 0
+
+fake = Faker('zh_CN')
 
 
 # 获取代理ip
@@ -61,7 +80,6 @@ def register(index):
         msg("线程启动", "成功", "第 " + str(index) + " 次")
 
         timeout = 10
-        now_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
 
         # 加启动配置
         option = webdriver.ChromeOptions()
@@ -92,18 +110,6 @@ def register(index):
 
         # 设置浏览器宽高
         driver.set_window_size(1980, 900)
-
-        try:
-            url = 'https://www.ipip.net/ip.html'
-            driver.get(url)
-        except:
-            msg('访问IP查询', '超时', '代理访问超时')
-        # 获取ip地址
-        xpath = "//table[2]/tbody/tr[2]/td[2]/span[1]"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath)))
-        ip_address = driver.find_element_by_xpath(xpath).text
-        msg('获取代理IP', '成功', ip_address)
 
         try:
             url = 'https://www.nike.com/cn/'
@@ -158,12 +164,7 @@ def register(index):
             print("【填写手机号】")
 
             # 随机移动鼠标 防止被监控为BOT行为
-            for v in range(5):
-                x = random.randint(-100, 500)
-                y = random.randint(-100, 500)
-                ActionChains(driver).move_by_offset(x, y).perform()
-                msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
-                time.sleep(0.5)
+            randomMouse(driver)
 
             # 点击发送验证码
             xpath = "//input[@value='发送验证码']"
@@ -206,8 +207,12 @@ def register(index):
         dom.click()
         print("【点击 继续】")
 
-        # 获取姓名
-        name = nameSdk.getName()
+        # 获取随机姓名
+        name = {
+            'xm': fake.last_name(),
+            'mz': fake.first_name(),
+        }
+        print("【随机姓名】：", name['xm'] + name['mz'])
 
         # 填写 姓
         xpath = "//input[@placeholder='姓氏']"
@@ -249,16 +254,12 @@ def register(index):
         WebDriverWait(driver, timeout, 0.5).until(
             EC.element_to_be_clickable((By.XPATH, xpath))
         )
-        driver.find_elements_by_xpath(xpath)[0].click()
-        print("【选择 性别 男 M】")
+        sex_num = random.randint(0, 1)
+        driver.find_elements_by_xpath(xpath)[sex_num].click()
+        print("【选择 性别】：", sex_num)
 
         # 随机移动鼠标 防止被监控为BOT行为
-        for v in range(3):
-            x = random.randint(-100, 500)
-            y = random.randint(-100, 500)
-            ActionChains(driver).move_by_offset(x, y).perform()
-            msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
-            time.sleep(0.5)
+        randomMouse(driver)
 
         # 点击注册
         xpath = "//input[@value='注册']"
@@ -272,13 +273,7 @@ def register(index):
         print("【点击注册】")
 
         # 随机移动鼠标 防止被监控为BOT行为
-        for v in range(5):
-            x = random.randint(-100, 500)
-            y = random.randint(-100, 500)
-            ActionChains(driver).move_by_offset(x, y).perform()
-            msg('鼠标随机移动', "第 " + str(v) + " 次", "坐标： X:" + str(x) + ' Y:' + str(y))
-            time.sleep(0.5)
-
+        randomMouse(driver)
 
         # 设置出生日日期
         random_year = '00' + str(random.randint(1990, 2000))
@@ -323,7 +318,6 @@ def register(index):
             'email': email_main,
             'access_token': "",
             'step': 'register',
-            'ip_address': ip_address,
             'time': arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss'),
         }
         ret = db_account.insert_one(data)
@@ -332,11 +326,15 @@ def register(index):
         else:
             print("保存账号失败", 500, data)
 
-        setAddress(driver, phone)
+        address = setAddress(driver, phone)
+        if not address:
+            return False
 
         refresh_token = getRefreshToken(driver, phone)
+        if not refresh_token:
+            return False
 
-        getAccessToken(phone, refresh_token, proxies)
+        # getAccessToken(phone, refresh_token, proxies)
 
         NUM += 1
 
@@ -385,7 +383,6 @@ def getRefreshToken(driver, phone):
     except:
         traceback.print_exc()
         driver.save_screenshot('nike_error/' + phone + '_' + str(arrow.now().timestamp) + '.png')
-
         return False
 
 
@@ -422,6 +419,7 @@ def getAccessToken(phone, refresh_token, proxies):
             continue
     try:
         access_token = ret.json()['access_token']
+        msg('更新AccessToken', '成功', ret.json())
     except:
         access_token = ret.json()
         msg('更新AccessToken', 500, ret.json())
@@ -480,7 +478,11 @@ def setAddress(driver, phone):
     set_num = 1
     while set_num <= 3:
         try:
-            name = nameSdk.getName()
+            name = {
+                'xm': fake.last_name(),
+                'mz': fake.first_name(),
+            }
+            print("【随机姓名】：", name['xm'] + name['mz'])
 
             # 填写 姓
             xpath = "//input[@name='姓氏']"
@@ -529,7 +531,7 @@ def setAddress(driver, phone):
             # 填写 地址一
             address = ['大泉街道', '老矿街道', '工业园区管委会', '江庄街道']
             address = random.choice(address)
-            address_random = nameSdk.getAddress()
+            address_random = fake.street_address()
             address = address + address_random
             print("【获取地址】：", address)
 
@@ -590,6 +592,39 @@ def setAddress(driver, phone):
             set_num += 1
 
 
+# 获取用户信息
+def getUser(access_token):
+    url = HOST + 'getUserService'
+    headers = {"authorization": "Bearer " + access_token}
+
+    PARAMS['viewId'] = 'unite'
+    PARAMS['atgSync'] = 'true'
+
+    PROXIES = {}
+
+    ret = requests.get(url, params=PARAMS, headers=headers, proxies=PROXIES)
+    if ret.status_code != 200:
+        msg('获取用户信息接口异常', ret.status_code, ret.text)
+        return False
+
+    msg('获取用户信息成功', ret.status_code, ret.json())
+
+    return ret.json()
+
+# 鼠标随机移动
+def randomMouse(driver, num=5):
+    # 随机移动鼠标 防止被监控为BOT行为
+    for v in range(num):
+        x = random.randint(-100, 500)
+        y = random.randint(-100, 500)
+        ActionChains(driver).move_by_offset(x, y).perform()
+        time.sleep(0.5)
+
+    msg('鼠标随机移动', '次数', num)
+
+    return True
+
+
 def msg(name, status, content, line=True):
     msg_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
     print(msg_time, "[" + name + "]：", status, content)
@@ -601,14 +636,10 @@ def msg(name, status, content, line=True):
 if __name__ == '__main__':
     start_time = arrow.now().timestamp
 
-    myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
-    mydb = myclient["du"]
-    db_nike = mydb["nike"]
-
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=30) as pool:
-        for i in range(30):
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        for i in range(1):
             future1 = pool.submit(register, threading_index)
             threading_index += 1
 

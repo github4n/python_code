@@ -38,3 +38,9 @@ dist/
 *.pkl
 *.spec
 venv/
+/
+nike_error/
+NikeAccountGenerator-master/
+nikeAPI-Py-master/
+nike-master/
+StveaNikeBot-master/

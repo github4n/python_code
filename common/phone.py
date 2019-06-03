@@ -1,16 +1,6 @@
 import requests, arrow, time, re
 import logging as LOG
 
-# 日志配置
-log_name = "log/phone.log"
-LOG.basicConfig(
-    level=LOG.DEBUG,
-    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    datefmt='%a, %d %b %Y %H:%M:%S',
-    filename=log_name,
-    filemode='a'
-)
-
 token = '01225890449cdb9df182ecf67475f3d540a69f4b6401'
 host = 'http://api.fxhyd.cn/UserInterface.aspx'
 
@@ -32,11 +22,11 @@ def getPhone(itemid):
         req = requests.get(host, params=params)
 
         if req.status_code != 200:
-            LOG.error('获取手机号接口异常')
+            msg('获取手机号接口异常')
             return False
 
         if 'success' not in req.text:
-            LOG.error('获取手机号接口失败')
+            msg('获取手机号接口失败')
             return False
 
         phone = req.text.split('|')[1]
@@ -45,7 +35,7 @@ def getPhone(itemid):
 
         return phone
     except:
-        LOG.error('获取手机号超时')
+        msg('获取手机号超时')
         return False
 
 
