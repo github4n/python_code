@@ -2,6 +2,8 @@ import common.conf as conf
 import common.phone as phoneSdk
 import common.randomName as nameSdk
 
+import nike
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -85,7 +87,7 @@ def open():
     option.add_argument('blink-settings=imagesEnabled=false')
 
     # 后台运行
-    option.add_argument('headless')
+    # option.add_argument('headless')
 
     # 使用隐身模式
     option.add_argument("--incognito")
@@ -216,70 +218,78 @@ def randomMouse(driver, num=5):
 
 # 登录
 def login(driver, phone):
-    try:
-        msg("用户登陆", '等待', phone)
-
-        timeout = 30
-
+    num = 1
+    while num <= 3:
         try:
-            url = 'https://www.nike.com/cn/'
-            driver.get(url)
+            msg("用户登陆", '等待', phone)
+
+            timeout = 30
+
+            try:
+                url = 'https://www.nike.com/cn/'
+                driver.get(url)
+            except:
+                msg('访问nike首页', '超时', '代理访问超时')
+                return False
+
+            randomMouse(driver)
+
+            # 加入/登录Nike⁠Plus账号
+            xpath = "//span[text()='加入/登录Nike⁠Plus账号']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+            dom = driver.find_element_by_xpath(xpath)
+
+            ActionChains(driver).move_to_element(dom).perform()
+            dom.click()
+            print("【加入/登录Nike⁠Plus账号】")
+
+            # 填写手机号
+            xpath = "//input[@placeholder='手机号码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            driver.find_element_by_xpath(xpath).send_keys(phone)
+            print("填写手机号")
+
+            # 填写密码  统一密码
+            password = 'Mn476489634'
+            xpath = "//input[@placeholder='密码']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            driver.find_element_by_xpath(xpath).send_keys(password)
+            print("填写密码")
+
+            # 点击登录
+            xpath = "//input[@value='登录']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+            driver.find_element_by_xpath(xpath).click()
+            print("点击登录")
+
+            randomMouse(driver)
+
+            # 等待登录完成
+            xpath = "//*[@id='ciclp-app']"
+            WebDriverWait(driver, timeout, 0.5).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
+
+            msg("用户登陆", '成功', phone)
+
+            time.sleep(5)
+
+            return driver
         except:
-            msg('访问nike首页', '超时', '代理访问超时')
-            return False
+            traceback.print_exc()
+            driver.save_screenshot(phone + '_' + str(arrow.now().timestamp) + '.png')
+            num += 1
+            continue
 
-        randomMouse(driver)
-
-        # 加入/登录Nike⁠Plus账号
-        xpath = "//span[text()='加入/登录Nike⁠Plus账号']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath))
-        )
-        dom = driver.find_element_by_xpath(xpath)
-
-        ActionChains(driver).move_to_element(dom).perform()
-        dom.click()
-        print("【加入/登录Nike⁠Plus账号】")
-
-        # 填写手机号
-        xpath = "//input[@placeholder='手机号码']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath))
-        )
-        driver.find_element_by_xpath(xpath).send_keys(phone)
-        print("填写手机号")
-
-        # 填写密码  统一密码
-        password = 'Mn476489634'
-        xpath = "//input[@placeholder='密码']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.presence_of_element_located((By.XPATH, xpath))
-        )
-        driver.find_element_by_xpath(xpath).send_keys(password)
-        print("填写密码")
-
-        # 点击登录
-        xpath = "//input[@value='登录']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath))
-        )
-        driver.find_element_by_xpath(xpath).click()
-        print("点击登录")
-
-        randomMouse(driver)
-
-        # 等待登录完成
-        xpath = "//*[@id='ciclp-app']"
-        WebDriverWait(driver, timeout, 0.5).until(
-            EC.element_to_be_clickable((By.XPATH, xpath))
-        )
-
-        msg("用户登陆", '成功', phone)
-
-        return driver
-    except:
-        traceback.print_exc()
-        driver.save_screenshot(phone + '_' + str(arrow.now().timestamp) + '.png')
+    return False
 
 
 def msg(name, status='', content='', line=True):
@@ -291,6 +301,12 @@ def msg(name, status='', content='', line=True):
 
 
 if __name__ == '__main__':
+    driver = open()
+    login(driver, 15302726241)
+    nike.setAddress(driver, 15302726241)
+
+    exit()
+
     start_time = arrow.now().timestamp
 
     user = db_account.find().limit(100)

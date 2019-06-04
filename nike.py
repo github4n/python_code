@@ -1,6 +1,5 @@
 import common.phone as phoneSdk
 
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -97,8 +96,8 @@ def register(index):
         option.add_argument("--incognito")
 
         # 使用代理
-        proxies = getProxies()
-        option.add_argument('proxy-server=' + proxies)
+        # proxies = getProxies()
+        # option.add_argument('proxy-server=' + proxies)
 
         driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe',
                                   chrome_options=option)
@@ -288,16 +287,15 @@ def register(index):
         driver.find_element_by_xpath(xpath).send_keys(random_birth)
         print("【设置出生日日期：", random_birth)
 
-        # 设置邮箱
-        email_random = str(arrow.now().timestamp)
-        email_main = 'levislin2016+' + email_random + '@gmail.com'
-        print("获取无限域名地址：", email_main)
+        # 设置邮箱 无限影子邮箱+转发
+        email = str(phone) + '@rank666.uu.ma'
+        print("获取无限域名地址：", email)
 
         xpath = "//input[@placeholder='电子邮件']"
         WebDriverWait(driver, timeout, 0.5).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.find_element_by_xpath(xpath).send_keys(email_main)
-        print("【设置电子邮件】：", email_main)
+        driver.find_element_by_xpath(xpath).send_keys(email)
+        print("【设置电子邮件】：", email)
 
         # 点击保存 登陆
         xpath = "//input[@value='保存']"
@@ -315,7 +313,7 @@ def register(index):
             'address': "",
             'refresh_token': "",
             'birthday': random_birth,
-            'email': email_main,
+            'email': email,
             'access_token': "",
             'step': 'register',
             'time': arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss'),
@@ -440,7 +438,6 @@ def getAccessToken(phone, refresh_token, proxies):
 
     return access_token
 
-
 def setAddress(driver, phone):
     time.sleep(5)
 
@@ -529,10 +526,17 @@ def setAddress(driver, phone):
             print("【选择乡镇区县 贾汪区】")
 
             # 填写 地址一
+            # 随机街道
             address = ['大泉街道', '老矿街道', '工业园区管委会', '江庄街道']
             address = random.choice(address)
+            # 随机地址
             address_random = fake.street_address()
-            address = address + address_random
+            # 随机地址详情
+            address_detail1 = str(random.randint(1, 9)) + '栋'
+            address_detail2 = str(random.randint(1, 6)) + '单元'
+            address_detail3 = str(random.randint(1, 32)) + str(random.randint(1, 2)) + str(random.randint(1, 10)) + '室'
+
+            address = address + address_random + address_detail1 + address_detail2 + address_detail3
             print("【获取地址】：", address)
 
             xpath = "//*[@id='地址 1']"
@@ -610,6 +614,7 @@ def getUser(access_token):
     msg('获取用户信息成功', ret.status_code, ret.json())
 
     return ret.json()
+
 
 # 鼠标随机移动
 def randomMouse(driver, num=5):
