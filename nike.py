@@ -44,7 +44,7 @@ fake = Faker('zh_CN')
 # 获取代理ip
 def getProxies():
     num = 1
-    while num <= 3:
+    while num <= 5:
         proxies_api = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
         ret = requests.get(proxies_api)
         if ret.status_code != 200:
@@ -57,19 +57,14 @@ def getProxies():
                 time.sleep(1)
                 num += 1
                 continue
-        try:
-            url = 'https://www.nike.com/cn/'
-            requests.get(url, proxies={'https': ret.text}, timeout=10)
-        except:
-            msg('获取代理IP', 'IP速度过慢', '重新获取')
-            num += 1
-            continue
 
-        break
+        msg('获取代理IP', '成功', ret.text)
 
-    msg('获取代理IP', '成功', ret.text)
+        return ret.text
 
-    return ret.text
+    return False
+
+
 
 
 # 注册账号
@@ -77,6 +72,21 @@ def register(index):
     global NUM
     try:
         msg("线程启动", "成功", "第 " + str(index) + " 次")
+
+        num = 1
+        while num <= 3:
+            try:
+                url = 'https://www.nike.com/cn/'
+
+                proxies = getProxies()
+
+                requests.get(url, proxies={'https': proxies}, timeout=10)
+            except:
+                msg('获取代理IP', 'IP速度过慢', '重新获取')
+                num += 1
+                continue
+
+            break
 
         timeout = 10
 
@@ -90,14 +100,13 @@ def register(index):
         option.add_argument('blink-settings=imagesEnabled=false')
 
         # 后台运行
-        # option.add_argument('headless')
+        option.add_argument('headless')
 
         # 使用隐身模式
         option.add_argument("--incognito")
 
         # 使用代理
-        # proxies = getProxies()
-        # option.add_argument('proxy-server=' + proxies)
+        option.add_argument('proxy-server=' + proxies)
 
         driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe',
                                   chrome_options=option)
@@ -324,23 +333,33 @@ def register(index):
         else:
             print("保存账号失败", 500, data)
 
-        address = setAddress(driver, phone)
-        if not address:
-            return False
+        time.sleep(5)
 
         refresh_token = getRefreshToken(driver, phone)
         if not refresh_token:
             return False
 
-        # getAccessToken(phone, refresh_token, proxies)
+        address = setAddress(driver, phone)
+        if not address:
+            return False
+
+        access_token = getAccessToken(phone, refresh_token, proxies)
+        if not access_token:
+            return False
+
+        setting = getSetting(access_token, proxies)
+        if not setting:
+            return False
+
+        set_api = setSetttingApi(setting, access_token, proxies)
+        if not set_api:
+            return False
 
         NUM += 1
 
         msg('成功统计', '数量', NUM)
 
         return True
-
-
 
     except:
         driver.save_screenshot('nike_error/' + phone + '_' + str(arrow.now().timestamp) + '.png')
@@ -373,9 +392,9 @@ def getRefreshToken(driver, phone):
         }}, upsert=True)
 
         if ret.acknowledged:
-            print("更新RefreshToken：", "成功", "手机号：", phone)
+            msg("更新RefreshToken：", "成功", "手机号：" + str(phone))
         else:
-            print("更新RefreshToken：", "失败", "手机号：", phone)
+            msg("更新RefreshToken：", "失败", "手机号：" + str(phone))
 
         return refresh_token
     except:
@@ -386,6 +405,14 @@ def getRefreshToken(driver, phone):
 
 # 获取access_token
 def getAccessToken(phone, refresh_token, proxies):
+    if not phone:
+        msg('获取AccessToken', '失败', 'phone 不能为空,phone:' + str(phone))
+        return False
+
+    if not refresh_token:
+        msg('获取AccessToken', '失败', 'refresh_token 不能为空,refresh_token:' + str(refresh_token))
+        return False
+
     Timeout = 20
 
     url = 'https://api.nike.com/idn/shim/oauth/2.0/token'
@@ -395,6 +422,7 @@ def getAccessToken(phone, refresh_token, proxies):
         'ux_id': 'com.nike.commerce.snkrs.ios',
         'refresh_token': refresh_token,
     }
+
     proxies = {
         'https': proxies,
     }
@@ -403,11 +431,34 @@ def getAccessToken(phone, refresh_token, proxies):
     while num <= 3:
         try:
             ret = requests.post(url, json=json, timeout=Timeout, proxies=proxies)
+            try:
+                access_token = ret.json()['access_token']
+            except:
+                msg('获取AccessToken', 500, ret.json())
+                return False
+
+            msg('获取AccessToken', '成功', access_token)
+
+            # 更新数据库
+            where = {
+                'phone': phone
+            }
+            ret = db_account.update_one(where, {'$set': {
+                'access_token': access_token,
+                'step': 'access_token',
+            }}, upsert=True)
+
+            if ret.acknowledged:
+                msg("更新AccessToken：", "成功", access_token)
+            else:
+                msg("更新AccessToken：", "失败", access_token)
+
+            return access_token
             break
         except:
             new_proxies = getProxies()
 
-            msg('获取AccessToken', ret.status_code, '代理连接失败,重新获取代理ip:' + new_proxies)
+            msg('获取AccessToken', '代理超时', '代理连接失败,重新获取代理ip:' + new_proxies)
 
             proxies = {
                 'https': new_proxies,
@@ -415,33 +466,16 @@ def getAccessToken(phone, refresh_token, proxies):
 
             num += 1
             continue
-    try:
-        access_token = ret.json()['access_token']
-        msg('更新AccessToken', '成功', ret.json())
-    except:
-        access_token = ret.json()
-        msg('更新AccessToken', 500, ret.json())
 
-    # 更新数据库
-    where = {
-        'phone': phone
-    }
-    ret = db_account.update_one(where, {'$set': {
-        'access_token': access_token,
-        'step': 'access_token',
-    }}, upsert=True)
+    return False
 
-    if ret.acknowledged:
-        msg("更新AccessToken：", "成功", access_token)
-    else:
-        msg("更新AccessToken：", "失败", access_token)
 
-    return access_token
+
 
 def setAddress(driver, phone):
     time.sleep(5)
 
-    timeout = 10
+    timeout = 15
 
     num = 1
     while num <= 4:
@@ -525,19 +559,8 @@ def setAddress(driver, phone):
             driver.find_element_by_xpath(xpath).click()
             print("【选择乡镇区县 贾汪区】")
 
-            # 填写 地址一
-            # 随机街道
-            address = ['大泉街道', '老矿街道', '工业园区管委会', '江庄街道']
-            address = random.choice(address)
-            # 随机地址
-            address_random = fake.street_address()
-            # 随机地址详情
-            address_detail1 = str(random.randint(1, 9)) + '栋'
-            address_detail2 = str(random.randint(1, 6)) + '单元'
-            address_detail3 = str(random.randint(1, 32)) + str(random.randint(1, 2)) + str(random.randint(1, 10)) + '室'
-
-            address = address + address_random + address_detail1 + address_detail2 + address_detail3
-            print("【获取地址】：", address)
+            # 填写 地址一 随机地址
+            address = getRandomAddress()
 
             xpath = "//*[@id='地址 1']"
             WebDriverWait(driver, timeout, 0.5).until(
@@ -596,41 +619,215 @@ def setAddress(driver, phone):
             set_num += 1
 
 
+def getRandomAddress():
+    # 随机街道
+    address = ['大泉街道', '老矿街道', '工业园区管委会', '江庄街道']
+    address = random.choice(address)
+    # 随机地址
+    address_random = fake.street_address()
+    # 随机地址详情
+    address_detail1 = str(random.randint(1, 9)) + '栋'
+    address_detail2 = str(random.randint(1, 6)) + '单元'
+    address_detail3 = str(random.randint(1, 32)) + str(random.randint(1, 2)) + str(random.randint(1, 10)) + '室'
+
+    address = address + address_random + address_detail1 + address_detail2 + address_detail3
+
+    msg('获取随机地址', address)
+
+    return address
+
+
+# 获取设置信息
+def getSetting(access_token, proxies=''):
+    url = 'https://idn.nike.com/user/mexaccountsettings'
+
+    headers = {"authorization": "Bearer " + access_token}
+
+    proxies = {
+        'https': proxies,
+    }
+
+    num = 1
+    while num <= 3:
+        try:
+            ret = requests.get(url, timeout=20, headers=headers, proxies=proxies)
+            if ret.status_code != 200:
+                msg('获取设置信息接口异常', ret.status_code, ret.text)
+                return False
+
+            msg('获取设置信息成功', '成功')
+            # print(json.dumps(ret.json(), sort_keys=True, indent=4, separators=(', ', ': ')))
+
+            return ret.json()
+        except:
+            new_proxies = getProxies()
+
+            msg('获取设置信息', '代理超时', '代理连接失败,重新获取代理ip:' + new_proxies)
+
+            proxies = {
+                'https': new_proxies,
+            }
+
+            num += 1
+            continue
+
+    return False
+
+
+def setSetttingApi(phone, setting, access_token, proxies=''):
+    url = 'https://idn.nike.com/user/mexaccountsettings'
+
+    camAddressId = setting['address']['shipping']['camAddressId']
+    guid = setting['address']['shipping']['guid']
+    address = getRandomAddress()
+    email = phone + '@rank666.uu.ma'
+    json = {
+        "address": {
+            "shipping": {
+                "camAddressId": camAddressId,
+                "code": "000000",
+                "country": "CN",
+                "guid": guid,
+                "line1": address,
+                "line2": "",
+                "line3": "",
+                "locality": "徐州市",
+                "phone": {
+                    "primary": phone
+                },
+                "preferred": True,
+                "province": "CN-32",
+                "zone": "贾汪区",
+                "type": "SHIPPING",
+                "name": {
+                    "primary": {
+                        "family": fake.last_name(),
+                        "given": fake.first_name()
+                    }
+                }
+            }
+        },
+        'username': email,
+    }
+
+    headers = {
+        "authorization": "Bearer " + access_token,
+    }
+
+    proxies = {
+        'https': proxies,
+    }
+
+    num = 1
+    while num <= 3:
+        try:
+            ret = requests.put(url, json=json, timeout=20, headers=headers, proxies=proxies)
+            if ret.status_code != 202:
+                msg('设置地址接口异常', ret.status_code, ret.text)
+                return False
+
+            msg('设置地址接口成功', ret.status_code, json)
+            break
+        except:
+            new_proxies = getProxies()
+
+            msg('设置信息接口', '代理超时', '代理连接失败,重新获取代理ip:' + new_proxies)
+
+            proxies = {
+                'https': new_proxies,
+            }
+
+            num += 1
+            continue
+
+
+
+    # 更新数据库
+    where = {
+        'phone': phone
+    }
+    ret = db_account.update_one(where, {'$set': {
+        'address': address,
+        'email': email,
+        'step': 'setting',
+        'time': arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss'),
+    }}, upsert=True)
+
+    if ret.acknowledged:
+        print("数据库设置配送地址：", "成功", "手机号：", phone)
+    else:
+        print("数据库设置配送地址：", "失败", "手机号：", phone)
+
+    return True
+
+
 # 获取用户信息
-def getUser(access_token):
+def getUser(access_token, proxies=''):
     url = HOST + 'getUserService'
     headers = {"authorization": "Bearer " + access_token}
 
     PARAMS['viewId'] = 'unite'
     PARAMS['atgSync'] = 'true'
 
-    PROXIES = {}
+    proxies = {
+        'https': proxies,
+    }
 
-    ret = requests.get(url, params=PARAMS, headers=headers, proxies=PROXIES)
+    num = 1
+    while num <= 3:
+        try:
+            ret = requests.post(url, json=json, timeout=20, headers=headers, proxies=proxies)
+            break
+        except:
+            new_proxies = getProxies()
+
+            msg('设置信息接口', ret.status_code, '代理连接失败,重新获取代理ip:' + new_proxies)
+
+            proxies = {
+                'https': new_proxies,
+            }
+
+            num += 1
+            continue
+
     if ret.status_code != 200:
         msg('获取用户信息接口异常', ret.status_code, ret.text)
         return False
 
-    msg('获取用户信息成功', ret.status_code, ret.json())
+    msg('获取用户信息成功', ret.status_code)
+    print(json.dumps(ret.json(), sort_keys=True, indent=4, separators=(', ', ': ')))
 
     return ret.json()
 
 
 # 鼠标随机移动
-def randomMouse(driver, num=5):
-    # 随机移动鼠标 防止被监控为BOT行为
-    for v in range(num):
-        x = random.randint(-100, 500)
-        y = random.randint(-100, 500)
-        ActionChains(driver).move_by_offset(x, y).perform()
-        time.sleep(0.5)
+def randomMouse(driver):
+    msg('鼠标曲线移动移动', '开始')
 
-    msg('鼠标随机移动', '次数', num)
+    # 随机移动鼠标 防止被监控为BOT行为
+    mouse_arr = [{'x': 822, 'y': 525}, {'x': 668, 'y': 535}, {'x': 641, 'y': 537}, {'x': 682, 'y': 541},
+                 {'x': 711, 'y': 540}, {'x': 736, 'y': 538}, {'x': 769, 'y': 537}, {'x': 792, 'y': 533},
+                 {'x': 821, 'y': 531}, {'x': 855, 'y': 524}, {'x': 887, 'y': 523}, {'x': 918, 'y': 521},
+                 {'x': 944, 'y': 517}, {'x': 968, 'y': 514}, {'x': 1005, 'y': 503}, {'x': 1032, 'y': 498},
+                 {'x': 1062, 'y': 494}, {'x': 1077, 'y': 491}, {'x': 1111, 'y': 487}, {'x': 1144, 'y': 482},
+                 {'x': 1187, 'y': 476}, {'x': 1239, 'y': 468}, {'x': 1290, 'y': 455}, {'x': 1355, 'y': 431},
+                 {'x': 1409, 'y': 402}, {'x': 1433, 'y': 393}, {'x': 1462, 'y': 379}, {'x': 1500, 'y': 363},
+                 {'x': 1527, 'y': 349}, {'x': 1574, 'y': 323}, {'x': 1600, 'y': 309}, {'x': 1624, 'y': 298},
+                 {'x': 1648, 'y': 286}, {'x': 1682, 'y': 268}, {'x': 1715, 'y': 248}, {'x': 1736, 'y': 235},
+                 {'x': 1769, 'y': 208}, {'x': 1790, 'y': 192}, {'x': 1798, 'y': 187}, {'x': 1819, 'y': 173},
+                 {'x': 1841, 'y': 147}, {'x': 1851, 'y': 134}, {'x': 1862, 'y': 121}, {'x': 1871, 'y': 107},
+                 {'x': 1879, 'y': 93}, {'x': 1886, 'y': 81}, {'x': 1887, 'y': 79}, {'x': 1885, 'y': 79},
+                 {'x': 1870, 'y': 88}, {'x': 1824, 'y': 115}, {'x': 1802, 'y': 133}]
+    for v in mouse_arr:
+        ActionChains(driver).move_by_offset(v['x'], v['y']).perform()
+        time.sleep(0.1)
+
+    msg('鼠标曲线移动移动', '结束')
 
     return True
 
 
-def msg(name, status, content, line=True):
+def msg(name='', status='', content='', line=True):
     msg_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
     print(msg_time, "[" + name + "]：", status, content)
     if line:
@@ -643,8 +840,8 @@ if __name__ == '__main__':
 
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        for i in range(1):
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for i in range(10):
             future1 = pool.submit(register, threading_index)
             threading_index += 1
 

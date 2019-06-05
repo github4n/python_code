@@ -17,8 +17,7 @@ import time, random, arrow, threading, uuid
 import requests, queue, traceback, json, pymongo
 
 # 链接mongodb
-# myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
-myclient = pymongo.MongoClient("mongodb://" + conf.mongo['host'] + ':' + conf.mongo['port'])
+myclient = pymongo.MongoClient("mongodb://levislin:!!23Bayuesiri@144.48.9.105:27017")
 mydb = myclient["nike"]
 db_account = mydb["account"]
 
@@ -43,37 +42,6 @@ NUM = 0
 now_time = arrow.get(arrow.now().timestamp).to('local').format('YYYY-MM-DD HH:mm:ss')
 
 
-# 获取代理ip
-def getProxies():
-    num = 1
-    while num <= 3:
-        proxies_api = 'http://webapi.http.zhimacangku.com/getip?num=1&type=1&pro=&city=0&yys=0&port=1&time=1&ts=0&ys=0&cs=0&lb=6&sb=0&pb=4&mr=1&regions='
-        ret = requests.get(proxies_api)
-        if ret.status_code != 200:
-            msg('获取代理IP', '失败', ret.status_code)
-            return False
-
-        if 'code' in ret.text:
-            if ret.json()['code'] == 111:
-                msg('获取代理IP', '过于频繁', '1 秒后重新获取')
-                time.sleep(1)
-                num += 1
-                continue
-        try:
-            url = 'https://www.nike.com/cn/'
-            requests.get(url, proxies={'https': ret.text}, timeout=10)
-        except:
-            msg('获取代理IP', 'IP速度过慢', '重新获取')
-            num += 1
-            continue
-
-        break
-
-    msg('获取代理IP', '成功', ret.text)
-
-    return ret.text
-
-
 # 打开浏览器
 def open():
     msg("打开浏览器", '等待', '')
@@ -87,13 +55,13 @@ def open():
     option.add_argument('blink-settings=imagesEnabled=false')
 
     # 后台运行
-    # option.add_argument('headless')
+    option.add_argument('headless')
 
     # 使用隐身模式
     option.add_argument("--incognito")
 
     # 使用代理
-    proxies = getProxies()
+    proxies = nike.getProxies()
     option.add_argument('proxy-server=' + proxies)
 
     driver = webdriver.Chrome(executable_path='./driver/chromedriver_70_0_3538_16.exe',
@@ -149,6 +117,58 @@ def train(index, user):
         driver.close()
         driver.quit()
 
+    return True
+
+
+# 修改设置
+def updateSetting(index, user):
+    global NUM
+
+    try:
+        msg("线程启动", "成功", "第 " + str(index) + " 次")
+
+        msg('获取用户', user['phone'], user['name'])
+
+        if not user['address']:
+            msg('用户地址为空', '进入修改流程')
+            driver = open()
+            do_log = login(driver, user['phone'])
+            if not do_log:
+                return False
+
+            address = nike.setAddress(driver, user['phone'])
+            if not address:
+                return False
+            user['refresh_token'] = nike.getRefreshToken(driver, user['phone'])
+            if not user['refresh_token']:
+                return False
+
+        proxies = nike.getProxies()
+
+        access_token = nike.getAccessToken(user['phone'], user['refresh_token'], proxies)
+        if not access_token:
+            return False
+
+        getSetting = nike.getSetting(access_token, proxies)
+        if not getSetting:
+            return False
+
+        setSetting = nike.setSetttingApi(user['phone'], getSetting, access_token, proxies)
+        if not setSetting:
+            return False
+
+        NUM += 1
+
+        msg('成功统计', '数量', NUM)
+
+        return True
+    except:
+        traceback.print_exc()
+    finally:
+        driver.quit()
+
+    return True
+
 
 # 自动浏览页面
 def autoPage(driver):
@@ -203,15 +223,26 @@ def autoPage(driver):
 
 
 # 鼠标随机移动
-def randomMouse(driver, num=5):
+def randomMouse(driver):
     # 随机移动鼠标 防止被监控为BOT行为
-    for v in range(num):
-        x = random.randint(-100, 500)
-        y = random.randint(-100, 500)
-        ActionChains(driver).move_by_offset(x, y).perform()
-        time.sleep(0.5)
+    mouse_arr = [{'x': 822, 'y': 525}, {'x': 668, 'y': 535}, {'x': 641, 'y': 537}, {'x': 682, 'y': 541},
+                 {'x': 711, 'y': 540}, {'x': 736, 'y': 538}, {'x': 769, 'y': 537}, {'x': 792, 'y': 533},
+                 {'x': 821, 'y': 531}, {'x': 855, 'y': 524}, {'x': 887, 'y': 523}, {'x': 918, 'y': 521},
+                 {'x': 944, 'y': 517}, {'x': 968, 'y': 514}, {'x': 1005, 'y': 503}, {'x': 1032, 'y': 498},
+                 {'x': 1062, 'y': 494}, {'x': 1077, 'y': 491}, {'x': 1111, 'y': 487}, {'x': 1144, 'y': 482},
+                 {'x': 1187, 'y': 476}, {'x': 1239, 'y': 468}, {'x': 1290, 'y': 455}, {'x': 1355, 'y': 431},
+                 {'x': 1409, 'y': 402}, {'x': 1433, 'y': 393}, {'x': 1462, 'y': 379}, {'x': 1500, 'y': 363},
+                 {'x': 1527, 'y': 349}, {'x': 1574, 'y': 323}, {'x': 1600, 'y': 309}, {'x': 1624, 'y': 298},
+                 {'x': 1648, 'y': 286}, {'x': 1682, 'y': 268}, {'x': 1715, 'y': 248}, {'x': 1736, 'y': 235},
+                 {'x': 1769, 'y': 208}, {'x': 1790, 'y': 192}, {'x': 1798, 'y': 187}, {'x': 1819, 'y': 173},
+                 {'x': 1841, 'y': 147}, {'x': 1851, 'y': 134}, {'x': 1862, 'y': 121}, {'x': 1871, 'y': 107},
+                 {'x': 1879, 'y': 93}, {'x': 1886, 'y': 81}, {'x': 1887, 'y': 79}, {'x': 1885, 'y': 79},
+                 {'x': 1870, 'y': 88}, {'x': 1824, 'y': 115}, {'x': 1802, 'y': 133}]
+    for v in mouse_arr:
+        ActionChains(driver).move_by_offset(v['x'], v['y']).perform()
+        time.sleep(0.1)
 
-    msg('鼠标随机移动', '次数', num)
+    msg('鼠标曲线移动移动')
 
     return True
 
@@ -229,8 +260,7 @@ def login(driver, phone):
                 url = 'https://www.nike.com/cn/'
                 driver.get(url)
             except:
-                msg('访问nike首页', '超时', '代理访问超时')
-                return False
+                msg('访问NIKE首页', '代理访问超时')
 
             randomMouse(driver)
 
@@ -270,8 +300,6 @@ def login(driver, phone):
             driver.find_element_by_xpath(xpath).click()
             print("点击登录")
 
-            randomMouse(driver)
-
             # 等待登录完成
             xpath = "//*[@id='ciclp-app']"
             WebDriverWait(driver, timeout, 0.5).until(
@@ -301,21 +329,17 @@ def msg(name, status='', content='', line=True):
 
 
 if __name__ == '__main__':
-    driver = open()
-    login(driver, 15302726241)
-    nike.setAddress(driver, 15302726241)
-
-    exit()
-
     start_time = arrow.now().timestamp
 
-    user = db_account.find().limit(100)
+    # user = db_account.find().limit(100)
+    user = db_account.find({'step': 'access_token'})
 
     # 线程索引
     threading_index = 1
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         for i in user:
-            future1 = pool.submit(train, threading_index, i)
+            # future1 = pool.submit(train, threading_index, i)
+            future1 = pool.submit(updateSetting, threading_index, i)
             threading_index += 1
 
     end_time = arrow.now().timestamp
